@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 907e051355150644ca5ca132dfa4afa0, type: 3}
+  m_Name: GameSettings
+  m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Core.GameSettings
+  defaultHoldSeconds: 3
+  endInterviewHoldSeconds: 5
+  debugClickEnabled: 1
+  readyHoldSeconds: 3
+  recruitmentCycleCount: 3
+  heroIncomingDisplaySeconds: 3
+  genreStartDisplaySeconds: 3
+  recruitmentPhaseFunds: 100
+  resumeViewHoldSeconds: 3
+  resumeBackHoldSeconds: 3
+  hireHighlightColor: {r: 1, g: 0.85, b: 0.2, a: 1}
+  rejectHighlightColor: {r: 0.6, g: 0.1, b: 0.1, a: 1}
+  resumeCrumpleSteps: 4
+  rejectKnockbackForce: 8
+  rejectKnockbackDirection: {x: 0, y: 0.3, z: -1}
+  hiredLineupOrigin: {x: 0, y: 0, z: 0}
+  hiredLineupDirection: {x: 1, y: 0, z: 0}
+  hiredLineupSpacing: 2
+  characterEntryDuration: 4
+  defaultMinigameTimeLimit: 60
+  flightRevivalDivisor: 100
+  flightRevivalDelaySeconds: 1
+  finalBattleMaxHp: 1000
+  finalBattlePunchDamage: 20
+  finalBattleFadeOutSeconds: 2
+  endingHoldSeconds: 3
+  availableGenres: 000000000100000002000000030000000400000005000000060000000700000008000000
+  allCharacters:
+  - {fileID: 11400000, guid: 25960e4579a761c41afdd872917d734d, type: 2}

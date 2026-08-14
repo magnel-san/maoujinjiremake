@@ -104,3 +104,10 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+
+# MediaPipeUnityPlugin（サンプル・チュートリアル）
+/Assets/MediaPipeUnity/
+
+# MediaPipeUnityPlugin本体（プラグイン/モデルが大きいため）
+/Packages/com.github.homuler.mediapipe/
