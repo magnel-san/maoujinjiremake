@@ -38,16 +38,26 @@ namespace DemonLordHR.HandTracking
     private void Update()
     {
       var rig = _useRightHand ? _handTrackingController?.RightHandInstance : _handTrackingController?.LeftHandInstance;
-      var tip = rig != null ? rig.IndexTip : null;
+      var indexFinger = rig != null ? rig.index : null;
+      var baseBone = indexFinger != null && indexFinger.bones.Length == 4 ? indexFinger.bones[0] : null;
+      var tip = indexFinger != null && indexFinger.bones.Length == 4 ? indexFinger.bones[3] : null;
 
-      if (tip == null)
+      if (tip == null || baseBone == null)
       {
         SetPointerActive(false);
         return;
       }
 
       var origin = tip.position;
-      var direction = tip.forward;
+      // NOTE: リターゲット処理(HandTrackingController)は各ボーンのlocalPositionしか更新しておらず、
+      // localRotationは更新していないため、tip.forward(=ボーンの回転)は常に一定で使えない。
+      // 代わりに「人差し指の付け根→指先」の実際の位置ベクトルから向きを求める。
+      var direction = (tip.position - baseBone.position).normalized;
+      if (direction.sqrMagnitude < 0.0001f)
+      {
+        SetPointerActive(false);
+        return;
+      }
 
       if (Physics.Raycast(origin, direction, out var hit, _maxDistance, _raycastMask))
       {
