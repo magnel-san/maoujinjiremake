@@ -87,7 +87,12 @@ namespace DemonLordHR.HandTracking
     }
 
     /// <summary>
-    /// 指先の位置をカメラのビューポート座標に投影し、そのままUI矩形へ比例配分する（位置ベース、向き不使用）。
+    /// 指先の位置をカメラのビューポート座標に投影し（位置ベース、向き不使用）、
+    /// その視点座標を通るレイと「UI矩形が乗っている平面」との交点をポインター位置にする。
+    /// GetWorldCorners等でUI矩形のサイズから逆算する方式だと、UI矩形の実際の大きさ・位置が
+    /// カメラの視野角にぴったり一致していない限り中心以外がズレるが、
+    /// この方式はカメラの投影計算そのものを使うため、UI矩形のサイズに関わらず
+    /// 「画面上で見えている位置」と実際にポインターが置かれる位置が必ず一致する。
     /// デバッグ時はマウスのスクリーン座標をそのままビューポート座標として使う。
     /// </summary>
     private void UpdateUsingScreenMapping()
@@ -118,28 +123,27 @@ namespace DemonLordHR.HandTracking
         viewportY = viewportPoint.y;
       }
 
-      // -1(左/下端)〜+1(右/上端)、中央が0になる正規化座標。
-      var u = (viewportX - 0.5f) * 2f;
-      var v = (viewportY - 0.5f) * 2f;
-
       if (_clampToUIRect)
       {
-        u = Mathf.Clamp(u, -1f, 1f);
-        v = Mathf.Clamp(v, -1f, 1f);
+        viewportX = Mathf.Clamp01(viewportX);
+        viewportY = Mathf.Clamp01(viewportY);
       }
-      else if (Mathf.Abs(u) > 1f || Mathf.Abs(v) > 1f)
+      else if (viewportX < 0f || viewportX > 1f || viewportY < 0f || viewportY > 1f)
       {
         SetPointerActive(false);
         return;
       }
 
-      var corners = new Vector3[4];
-      _targetUIRect.GetWorldCorners(corners); // 0:左下 1:左上 2:右上 3:右下
-      var center = (corners[0] + corners[2]) * 0.5f;
-      var halfRight = (corners[2] - corners[1]) * 0.5f;
-      var halfUp = (corners[1] - corners[0]) * 0.5f;
+      var ray = _referenceCamera.ViewportPointToRay(new Vector3(viewportX, viewportY, 0f));
+      var plane = new Plane(_targetUIRect.forward, _targetUIRect.position);
 
-      var targetWorldPos = center + halfRight * u + halfUp * v;
+      if (!plane.Raycast(ray, out var enter) || enter <= 0f)
+      {
+        SetPointerActive(false);
+        return;
+      }
+
+      var targetWorldPos = ray.GetPoint(enter);
 
       SetPointerActive(true);
       ApplySmoothedPosition(targetWorldPos);
