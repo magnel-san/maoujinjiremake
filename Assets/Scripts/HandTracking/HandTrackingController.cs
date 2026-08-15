@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Diagnostics;
 using Mediapipe;
 using Mediapipe.Tasks.Components.Containers;
 using Mediapipe.Tasks.Core;
@@ -11,6 +10,9 @@ using Mediapipe.Unity.Sample;
 using UnityEngine;
 using ImageProcessingOptions = Mediapipe.Tasks.Vision.Core.ImageProcessingOptions;
 using VisionRunningMode = Mediapipe.Tasks.Vision.Core.RunningMode;
+using Landmark = Mediapipe.Tasks.Components.Containers.Landmark;
+using NormalizedLandmark = Mediapipe.Tasks.Components.Containers.NormalizedLandmark;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace DemonLordHR.HandTracking
 {

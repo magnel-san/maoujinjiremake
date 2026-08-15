@@ -3,13 +3,18 @@ using UnityEngine;
 namespace DemonLordHR.HandTracking
 {
   /// <summary>
-  /// 指の向き（人差し指の付け根→指先ベクトル）を、参照カメラ(<see cref="_referenceCamera"/>)の
-  /// 視野角(FOV)に対する角度の割合に変換し、UIの矩形(<see cref="_targetUIRect"/>)へ
-  /// そのまま比例配分してポインターを表示する。
-  /// 「カメラ画面の中央＝UIの中央、カメラ画面の端＝UIの端」という対応になるため、
-  /// 指先の位置ノイズに影響されにくく、UIがカメラと一緒に移動しても自動的に追従する。
-  /// カメラ／UI矩形が未設定の場合は、通常の3Dコライダーへのレイキャストにフォールバックする
-  /// （履歴書オブジェクトや偵察拠点など、UI以外の3D空間上のターゲットを指す場合に使用）。
+  /// 指の「向き」は使わず、手モデルの人差し指先ボーンの「位置」をそのままポインター位置に変換する。
+  /// 位置ベースなので、向き（角度）を経由する方式のように検出ノイズが角度計算で増幅されることがない。
+  ///
+  /// UIのRectTransform(<see cref="_targetUIRect"/>)と参照カメラ(<see cref="_referenceCamera"/>)が
+  /// 設定されている場合：指先のワールド座標をカメラのビューポート座標に投影し（<see cref="Camera.WorldToViewportPoint"/>）、
+  /// その座標をそのままUI矩形へ比例配分する。「カメラ画面に映る指先の位置＝UI上のポインター位置」という、
+  /// 見たままの対応になる。
+  ///
+  /// 未設定の場合は、指先のワールド座標をそのままポインターの表示位置として使う（3D空間のターゲット用）。
+  ///
+  /// ポインターが指しているターゲットの判定も、レイキャストではなく「ポインター表示位置の周囲に
+  /// コライダーがあるか」（<see cref="Physics.OverlapSphere"/>）で行う。
   /// </summary>
   public class PointerController : MonoBehaviour
   {
@@ -20,16 +25,21 @@ namespace DemonLordHR.HandTracking
     [SerializeField] private float _pointerRadius = 5f;
 
     [Header("画面マッピング方式（UIをまとめて指す場合）")]
-    [Tooltip("プレイヤーの見ているカメラ（画面中央=UI中央の基準にする）")]
+    [Tooltip("指先の位置を投影する基準カメラ")]
     [SerializeField] private Camera _referenceCamera;
     [Tooltip("ポインターを対応させるUIのRectTransform（World Space Canvas等）。" +
-      "カメラ画面の端がこの矩形の端に対応する。")]
+      "カメラのビューポート座標(0〜1)をそのままこの矩形へ比例配分する。")]
     [SerializeField] private RectTransform _targetUIRect;
-    [Tooltip("カメラの視野角の外を指した場合、矩形の端にクランプするか。falseなら非表示にする")]
+    [Tooltip("カメラのビューポート範囲の外を指した場合、矩形の端にクランプするか。falseなら非表示にする")]
     [SerializeField] private bool _clampToUIRect = true;
 
-    [Header("3Dフォールバック（UI以外の空間上のターゲットを指す場合）")]
+    [Header("ターゲット判定")]
+    [Tooltip("ポインター表示位置の周囲でターゲット(IPointerHoldTarget)を探す半径")]
+    [SerializeField] private float _hitTestRadius = 5f;
     [SerializeField] private LayerMask _raycastMask = ~0;
+
+    [Header("3Dフォールバック（UI以外の空間上のターゲットを指す場合）")]
+    [Tooltip("参照カメラ/UI矩形が未設定のとき、マウスから3D位置を決めるための最大距離")]
     [SerializeField] private float _maxDistance = 50f;
 
     [Header("共通")]
@@ -66,92 +76,51 @@ namespace DemonLordHR.HandTracking
 
     private void Update()
     {
-      Vector3 origin, direction;
+      if (_referenceCamera != null && _targetUIRect != null)
+      {
+        UpdateUsingScreenMapping();
+      }
+      else
+      {
+        UpdateUsing3DPosition();
+      }
+    }
+
+    /// <summary>
+    /// 指先の位置をカメラのビューポート座標に投影し、そのままUI矩形へ比例配分する（位置ベース、向き不使用）。
+    /// デバッグ時はマウスのスクリーン座標をそのままビューポート座標として使う。
+    /// </summary>
+    private void UpdateUsingScreenMapping()
+    {
+      float viewportX, viewportY;
 
       if (_debugUseMouse)
       {
-        if (!TryGetMouseRay(out origin, out direction))
+        viewportX = Input.mousePosition.x / Mathf.Max(1f, Screen.width);
+        viewportY = Input.mousePosition.y / Mathf.Max(1f, Screen.height);
+      }
+      else
+      {
+        if (!TryGetFingertipWorldPosition(out var fingertipWorldPos))
         {
           SetPointerActive(false);
           return;
         }
-      }
-      else if (!TryGetHandRay(out origin, out direction))
-      {
-        SetPointerActive(false);
-        return;
-      }
 
-      if (_referenceCamera != null && _targetUIRect != null)
-      {
-        UpdateUsingScreenMapping(origin, direction);
-      }
-      else
-      {
-        UpdateUsingColliderRaycast(origin, direction);
-      }
-    }
-
-    /// <summary>
-    /// 手首→指先のベクトルから向きを求める。付け根(MCP)→指先より基線が長く、
-    /// 検出ノイズによる角度のブレが小さいため、手首を起点にしている。
-    /// </summary>
-    private bool TryGetHandRay(out Vector3 origin, out Vector3 direction)
-    {
-      origin = default;
-      direction = default;
-
-      var rig = _useRightHand ? _handTrackingController?.RightHandInstance : _handTrackingController?.LeftHandInstance;
-      var tip = rig != null ? rig.IndexTip : null;
-      var wrist = rig != null ? rig.wristRoot : null;
-      if (tip == null || wrist == null) return false;
-
-      origin = tip.position;
-      direction = (tip.position - wrist.position).normalized;
-      return direction.sqrMagnitude > 0.0001f;
-    }
-
-    private bool TryGetMouseRay(out Vector3 origin, out Vector3 direction)
-    {
-      origin = default;
-      direction = default;
-
-      var cam = _referenceCamera != null ? _referenceCamera : Camera.main;
-      if (cam == null) return false;
-
-      var ray = cam.ScreenPointToRay(Input.mousePosition);
-      origin = ray.origin;
-      direction = ray.direction;
-      return true;
-    }
-
-    /// <summary>
-    /// 「カメラ画面の中央=UI矩形の中央、カメラ画面の端=UI矩形の端」となるよう、
-    /// 指の向きをカメラのFOVに対する角度の割合に変換してUI矩形へ比例配分する。
-    /// </summary>
-    private void UpdateUsingScreenMapping(Vector3 origin, Vector3 direction)
-    {
-      var camTransform = _referenceCamera.transform;
-
-      // カメラのローカル軸(右・上・前)に対する方向ベクトルの成分を求める。
-      var localDir = new Vector3(
-        Vector3.Dot(direction, camTransform.right),
-        Vector3.Dot(direction, camTransform.up),
-        Vector3.Dot(direction, camTransform.forward));
-
-      if (localDir.z <= 0.0001f)
-      {
-        // カメラの後ろ側を指している場合は無効
-        SetPointerActive(false);
-        return;
+        var viewportPoint = _referenceCamera.WorldToViewportPoint(fingertipWorldPos);
+        if (viewportPoint.z <= 0f)
+        {
+          // カメラの後ろ側
+          SetPointerActive(false);
+          return;
+        }
+        viewportX = viewportPoint.x;
+        viewportY = viewportPoint.y;
       }
 
-      var halfVFov = _referenceCamera.fieldOfView * 0.5f * Mathf.Deg2Rad;
-      var halfHFov = Mathf.Atan(Mathf.Tan(halfVFov) * _referenceCamera.aspect);
-
-      // u,v はそれぞれ画面中央を0、左右/上下端を±1とする正規化座標。
-      var u = Mathf.Atan2(localDir.x, localDir.z) / halfHFov;
-      var v = Mathf.Atan2(localDir.y, localDir.z) / halfVFov;
+      // -1(左/下端)〜+1(右/上端)、中央が0になる正規化座標。
+      var u = (viewportX - 0.5f) * 2f;
+      var v = (viewportY - 0.5f) * 2f;
 
       if (_clampToUIRect)
       {
@@ -174,32 +143,64 @@ namespace DemonLordHR.HandTracking
 
       SetPointerActive(true);
       ApplySmoothedPosition(targetWorldPos);
-
-      UpdateHoverTarget(RaycastForTarget(origin, direction));
+      UpdateHoverTarget(FindTargetNear(_smoothedWorldPos.Value));
     }
 
-    /// <summary>_referenceCamera / _targetUIRect未設定時の、通常の3Dコライダーへのレイキャスト方式。</summary>
-    private void UpdateUsingColliderRaycast(Vector3 origin, Vector3 direction)
+    /// <summary>
+    /// UI矩形/カメラが未設定の場合：指先のワールド座標をそのままポインター表示位置として使う。
+    /// デバッグ時はマウスのレイと、指先の代わりに使う固定距離の交点を使う。
+    /// </summary>
+    private void UpdateUsing3DPosition()
     {
-      if (Physics.Raycast(origin, direction, out var hit, _maxDistance, _raycastMask))
+      Vector3 targetPos;
+
+      if (_debugUseMouse)
       {
-        SetPointerActive(true);
-        ApplySmoothedPosition(hit.point);
-        UpdateHoverTarget(hit.collider.GetComponentInParent<IPointerHoldTarget>());
+        var cam = _referenceCamera != null ? _referenceCamera : Camera.main;
+        if (cam == null)
+        {
+          SetPointerActive(false);
+          return;
+        }
+        var ray = cam.ScreenPointToRay(Input.mousePosition);
+        targetPos = Physics.Raycast(ray, out var hit, _maxDistance, _raycastMask)
+          ? hit.point
+          : ray.origin + ray.direction * _maxDistance;
       }
       else
       {
-        SetPointerActive(true);
-        ApplySmoothedPosition(origin + direction * _maxDistance);
-        UpdateHoverTarget(null);
+        if (!TryGetFingertipWorldPosition(out targetPos))
+        {
+          SetPointerActive(false);
+          return;
+        }
       }
+
+      SetPointerActive(true);
+      ApplySmoothedPosition(targetPos);
+      UpdateHoverTarget(FindTargetNear(_smoothedWorldPos.Value));
     }
 
-    private IPointerHoldTarget RaycastForTarget(Vector3 origin, Vector3 direction)
+    private bool TryGetFingertipWorldPosition(out Vector3 position)
     {
-      if (Physics.Raycast(origin, direction, out var hit, _maxDistance, _raycastMask))
+      var rig = _useRightHand ? _handTrackingController?.RightHandInstance : _handTrackingController?.LeftHandInstance;
+      var tip = rig != null ? rig.IndexTip : null;
+      if (tip == null)
       {
-        return hit.collider.GetComponentInParent<IPointerHoldTarget>();
+        position = default;
+        return false;
+      }
+      position = tip.position;
+      return true;
+    }
+
+    private IPointerHoldTarget FindTargetNear(Vector3 worldPos)
+    {
+      var hits = Physics.OverlapSphere(worldPos, _hitTestRadius, _raycastMask);
+      foreach (var hit in hits)
+      {
+        var target = hit.GetComponentInParent<IPointerHoldTarget>();
+        if (target != null) return target;
       }
       return null;
     }
