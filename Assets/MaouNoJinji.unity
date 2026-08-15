@@ -1040,7 +1040,7 @@ MonoBehaviour:
   _trackingDistanceFromCamera: 1.5
   _mirrorX: 1
   _mirrorY: 0
-  _mirrorZ: 0
+  _mirrorZ: 1
   _rotationSmoothing: 0.6
   _positionSmoothing: 0.6
   _bootstrapPrefab: {fileID: 1384033818}

@@ -72,8 +72,9 @@ namespace DemonLordHR.HandTracking
     [SerializeField] private bool _mirrorX = true;
     [Tooltip("MediaPipeのY(下方向が正)の反転を無効化するか。通常はデフォルト(false)のままでUnityのY-upに変換される。")]
     [SerializeField] private bool _mirrorY;
-    [Tooltip("奥行き(Z)の向きを反転するか。カメラに近づく/遠ざかる動きが逆に見える場合に切り替える。")]
-    [SerializeField] private bool _mirrorZ;
+    [Tooltip("奥行き(Z)の向きを反転するか。指を握る/伸ばす向きが逆に見える場合に切り替える。" +
+      "MediaPipeのZ符号は未検証の推測だったため、デフォルトでON。")]
+    [SerializeField] private bool _mirrorZ = true;
 
     [Header("スムージング")]
     [Tooltip("ボーン回転の追従の速さ（1に近いほど即座に追従）。レスト基準で毎フレーム再計算するため値を大きくしても捻れない。")]
@@ -243,15 +244,25 @@ namespace DemonLordHR.HandTracking
     /// <summary>
     /// 人差し指先のビューポート座標（0〜1、X:右が1, Y:上が1）をMediaPipeの生データから直接取得する。
     /// 手モデルのボーン・回転計算を一切経由しないため、ポインターの位置決めに使うと安定する。
+    /// 指定した方の手のデータが今無い場合は、もう片方の手のデータがあればそちらにフォールバックする
+    /// （固定の左右設定と、実際にどちらの手を映しているかがズレていても追従できるようにするため）。
     /// </summary>
-    public bool TryGetIndexFingertipViewport(bool isRightHand, out Vector2 viewport)
+    public bool TryGetIndexFingertipViewport(bool preferRightHand, out Vector2 viewport)
     {
-      var cached = isRightHand ? _rightIndexTipViewport : _leftIndexTipViewport;
-      if (cached.HasValue)
+      var preferred = preferRightHand ? _rightIndexTipViewport : _leftIndexTipViewport;
+      if (preferred.HasValue)
       {
-        viewport = cached.Value;
+        viewport = preferred.Value;
         return true;
       }
+
+      var fallback = preferRightHand ? _leftIndexTipViewport : _rightIndexTipViewport;
+      if (fallback.HasValue)
+      {
+        viewport = fallback.Value;
+        return true;
+      }
+
       viewport = default;
       return false;
     }
