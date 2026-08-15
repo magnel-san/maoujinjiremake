@@ -67,8 +67,9 @@ namespace DemonLordHR.HandTracking
     [SerializeField] private float _trackingDistanceFromCamera = 1.5f;
 
     [Header("軸の向き（見た目が反転・上下逆に見える場合はここを調整）")]
-    [Tooltip("MediaPipeのX(右方向が正)を反転するか。カメラ映像のミラー設定と揃える。")]
-    [SerializeField] private bool _mirrorX;
+    [Tooltip("MediaPipeのX(右方向が正)を反転するか。カメラ映像のミラー設定と揃える。" +
+      "内カメラ（フロントカメラ）は鏡像になるため、デフォルトでON。")]
+    [SerializeField] private bool _mirrorX = true;
     [Tooltip("MediaPipeのY(下方向が正)の反転を無効化するか。通常はデフォルト(false)のままでUnityのY-upに変換される。")]
     [SerializeField] private bool _mirrorY;
     [Tooltip("奥行き(Z)の向きを反転するか。カメラに近づく/遠ざかる動きが逆に見える場合に切り替える。")]
