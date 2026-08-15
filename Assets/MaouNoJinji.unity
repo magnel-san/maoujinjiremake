@@ -236,6 +236,8 @@ GameObject:
   - component: {fileID: 85071185}
   - component: {fileID: 85071187}
   - component: {fileID: 85071186}
+  - component: {fileID: 85071189}
+  - component: {fileID: 85071188}
   m_Layer: 0
   m_Name: TitleStartButton
   m_TagString: Untagged
@@ -276,7 +278,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.UI.CircularHoldButton
   _holdSeconds: 3
-  _gaugeImage: {fileID: 1284932628475037437, guid: 4522dfa75ba69f344a02b7de7358aba9, type: 3}
+  _gaugeImage: {fileID: 85071188}
   _debugClickEnabled: 1
   _resetAfterTrigger: 1
 --- !u!135 &85071187
@@ -300,6 +302,44 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 50
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &85071188
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 85071184}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 53f6bce1aafc3844495bb01e317d2e40, type: 3}
+  m_Type: 3
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &85071189
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 85071184}
+  m_CullTransparentMesh: 1
 --- !u!1 &150368324
 GameObject:
   m_ObjectHideFlags: 0
@@ -456,6 +496,8 @@ GameObject:
   - component: {fileID: 252021100}
   - component: {fileID: 252021102}
   - component: {fileID: 252021101}
+  - component: {fileID: 252021104}
+  - component: {fileID: 252021103}
   m_Layer: 0
   m_Name: RuleReadyButton
   m_TagString: Untagged
@@ -496,7 +538,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.UI.CircularHoldButton
   _holdSeconds: 3
-  _gaugeImage: {fileID: 1284932628475037437, guid: 4522dfa75ba69f344a02b7de7358aba9, type: 3}
+  _gaugeImage: {fileID: 252021103}
   _debugClickEnabled: 1
   _resetAfterTrigger: 1
 --- !u!135 &252021102
@@ -520,6 +562,44 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 50
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &252021103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252021099}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 53f6bce1aafc3844495bb01e317d2e40, type: 3}
+  m_Type: 3
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &252021104
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252021099}
+  m_CullTransparentMesh: 1
 --- !u!1 &337351676
 GameObject:
   m_ObjectHideFlags: 0
@@ -1713,6 +1793,8 @@ GameObject:
   - component: {fileID: 1298296684}
   - component: {fileID: 1298296686}
   - component: {fileID: 1298296685}
+  - component: {fileID: 1298296688}
+  - component: {fileID: 1298296687}
   m_Layer: 0
   m_Name: EndingEndButton
   m_TagString: Untagged
@@ -1753,7 +1835,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.UI.CircularHoldButton
   _holdSeconds: 3
-  _gaugeImage: {fileID: 1284932628475037437, guid: 4522dfa75ba69f344a02b7de7358aba9, type: 3}
+  _gaugeImage: {fileID: 1298296687}
   _debugClickEnabled: 1
   _resetAfterTrigger: 1
 --- !u!135 &1298296686
@@ -1777,6 +1859,44 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 50
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1298296687
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1298296683}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 53f6bce1aafc3844495bb01e317d2e40, type: 3}
+  m_Type: 3
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1298296688
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1298296683}
+  m_CullTransparentMesh: 1
 --- !u!1 &1317193719
 GameObject:
   m_ObjectHideFlags: 0
@@ -1935,6 +2055,8 @@ GameObject:
   - component: {fileID: 1388123018}
   - component: {fileID: 1388123017}
   - component: {fileID: 1388123016}
+  - component: {fileID: 1388123020}
+  - component: {fileID: 1388123019}
   m_Layer: 0
   m_Name: MinigameReadyButton
   m_TagString: Untagged
@@ -1955,7 +2077,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.UI.CircularHoldButton
   _holdSeconds: 3
-  _gaugeImage: {fileID: 1284932628475037437, guid: 4522dfa75ba69f344a02b7de7358aba9, type: 3}
+  _gaugeImage: {fileID: 1388123019}
   _debugClickEnabled: 1
   _resetAfterTrigger: 1
 --- !u!135 &1388123017
@@ -1999,6 +2121,44 @@ RectTransform:
   m_AnchoredPosition: {x: 550, y: 360}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1388123019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1388123015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 53f6bce1aafc3844495bb01e317d2e40, type: 3}
+  m_Type: 3
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1388123020
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1388123015}
+  m_CullTransparentMesh: 1
 --- !u!1 &1454572516
 GameObject:
   m_ObjectHideFlags: 0
@@ -2758,6 +2918,8 @@ GameObject:
   - component: {fileID: 2108854715}
   - component: {fileID: 2108854717}
   - component: {fileID: 2108854716}
+  - component: {fileID: 2108854719}
+  - component: {fileID: 2108854718}
   m_Layer: 0
   m_Name: EndInterviewButton
   m_TagString: Untagged
@@ -2798,7 +2960,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.UI.CircularHoldButton
   _holdSeconds: 3
-  _gaugeImage: {fileID: 1284932628475037437, guid: 4522dfa75ba69f344a02b7de7358aba9, type: 3}
+  _gaugeImage: {fileID: 2108854718}
   _debugClickEnabled: 1
   _resetAfterTrigger: 1
 --- !u!135 &2108854717
@@ -2822,6 +2984,44 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 50
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &2108854718
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2108854714}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 53f6bce1aafc3844495bb01e317d2e40, type: 3}
+  m_Type: 3
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &2108854719
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2108854714}
+  m_CullTransparentMesh: 1
 --- !u!1001 &3587560501402011260
 PrefabInstance:
   m_ObjectHideFlags: 0

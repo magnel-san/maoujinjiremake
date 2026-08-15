@@ -235,6 +235,27 @@ namespace DemonLordHR.HandTracking
       return obj.GetComponent<Bootstrap>();
     }
 
+    // 人差し指先（ランドマーク8番）の正規化座標を、手モデルのボーン計算を一切経由せずに
+    // 直接キャッシュしておく。ポインターの位置決めはこれだけを使う（回転計算のブレの影響を受けない）。
+    private Vector2? _leftIndexTipViewport;
+    private Vector2? _rightIndexTipViewport;
+
+    /// <summary>
+    /// 人差し指先のビューポート座標（0〜1、X:右が1, Y:上が1）をMediaPipeの生データから直接取得する。
+    /// 手モデルのボーン・回転計算を一切経由しないため、ポインターの位置決めに使うと安定する。
+    /// </summary>
+    public bool TryGetIndexFingertipViewport(bool isRightHand, out Vector2 viewport)
+    {
+      var cached = isRightHand ? _rightIndexTipViewport : _leftIndexTipViewport;
+      if (cached.HasValue)
+      {
+        viewport = cached.Value;
+        return true;
+      }
+      viewport = default;
+      return false;
+    }
+
     private void RetargetToBones(HandLandmarkerResult result)
     {
       if (result.handWorldLandmarks == null) return;
@@ -242,6 +263,23 @@ namespace DemonLordHR.HandTracking
       for (var i = 0; i < result.handWorldLandmarks.Count; i++)
       {
         var isRight = IsRightHand(result, i);
+
+        NormalizedLandmark? normalizedWrist = null;
+        NormalizedLandmark? normalizedIndexTip = null;
+        if (result.handLandmarks != null && i < result.handLandmarks.Count &&
+            result.handLandmarks[i].landmarks != null && result.handLandmarks[i].landmarks.Count > 8)
+        {
+          var landmarks = result.handLandmarks[i].landmarks;
+          normalizedWrist = landmarks[0];
+          normalizedIndexTip = landmarks[8];
+        }
+
+        if (normalizedIndexTip.HasValue)
+        {
+          var viewport = ToViewport(normalizedIndexTip.Value);
+          if (isRight) _rightIndexTipViewport = viewport; else _leftIndexTipViewport = viewport;
+        }
+
         var rig = isRight ? _rightHandInstance : _leftHandInstance;
         var state = isRight ? _rightState : _leftState;
         if (rig == null || state == null || rig.wristRoot == null) continue;
@@ -249,15 +287,16 @@ namespace DemonLordHR.HandTracking
         var worldLandmarks = result.handWorldLandmarks[i];
         if (worldLandmarks.landmarks == null || worldLandmarks.landmarks.Count < 21) continue;
 
-        NormalizedLandmark? normalizedWrist = null;
-        if (result.handLandmarks != null && i < result.handLandmarks.Count &&
-            result.handLandmarks[i].landmarks != null && result.handLandmarks[i].landmarks.Count > 0)
-        {
-          normalizedWrist = result.handLandmarks[i].landmarks[0];
-        }
-
         ApplyPose(rig, state, worldLandmarks, normalizedWrist);
       }
+    }
+
+    /// <summary>MediaPipeの正規化座標(X:右が1,Y:下が1)を、ビューポート座標(X:右が1,Y:上が1)に変換する。</summary>
+    private Vector2 ToViewport(NormalizedLandmark lm)
+    {
+      var x = _mirrorX ? 1f - lm.x : lm.x;
+      var y = _mirrorY ? lm.y : 1f - lm.y;
+      return new Vector2(x, y);
     }
 
     /// <summary>
@@ -288,11 +327,8 @@ namespace DemonLordHR.HandTracking
       // --- 手首位置 ---
       if (_trackingCamera != null && normalizedWrist.HasValue)
       {
-        var nx = normalizedWrist.Value.x;
-        var ny = normalizedWrist.Value.y;
-        var viewportX = _mirrorX ? 1f - nx : nx;
-        var viewportY = _mirrorY ? ny : 1f - ny;
-        var viewportPoint = new Vector3(viewportX, viewportY, _trackingDistanceFromCamera);
+        var viewport = ToViewport(normalizedWrist.Value);
+        var viewportPoint = new Vector3(viewport.x, viewport.y, _trackingDistanceFromCamera);
         var targetWorldPos = _trackingCamera.ViewportToWorldPoint(viewportPoint);
         rig.wristRoot.position = Vector3.Lerp(rig.wristRoot.position, targetWorldPos, _positionSmoothing);
       }

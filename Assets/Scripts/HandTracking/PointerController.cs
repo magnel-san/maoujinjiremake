@@ -1,17 +1,18 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace DemonLordHR.HandTracking
 {
   /// <summary>
-  /// 指の「向き」は使わず、手モデルの人差し指先ボーンの「位置」をそのままポインター位置に変換する。
-  /// 位置ベースなので、向き（角度）を経由する方式のように検出ノイズが角度計算で増幅されることがない。
+  /// 指の「向き」は一切使わない。MediaPipeが検出した人差し指先の正規化座標
+  /// （<see cref="HandTrackingController.TryGetIndexFingertipViewport"/>）を直接カメラのビューポート座標として扱う。
+  /// 手モデルのボーン・回転計算を完全に迂回するため、手モデル側の回転リターゲットのブレの影響を受けない。
   ///
   /// UIのRectTransform(<see cref="_targetUIRect"/>)と参照カメラ(<see cref="_referenceCamera"/>)が
-  /// 設定されている場合：指先のワールド座標をカメラのビューポート座標に投影し（<see cref="Camera.WorldToViewportPoint"/>）、
-  /// その座標をそのままUI矩形へ比例配分する。「カメラ画面に映る指先の位置＝UI上のポインター位置」という、
-  /// 見たままの対応になる。
+  /// 設定されている場合：そのビューポート座標を通るレイと、UI矩形が乗っている平面との交点をポインター位置にする。
+  /// 「カメラの映る範囲＝UIの範囲」という対応になるよう、カメラ側だけを調整すればよい。
   ///
-  /// 未設定の場合は、指先のワールド座標をそのままポインターの表示位置として使う（3D空間のターゲット用）。
+  /// 未設定の場合は、手モデルの指先ボーンのワールド座標をそのままポインターの表示位置として使う（3D空間のターゲット用）。
   ///
   /// ポインターが指しているターゲットの判定も、レイキャストではなく「ポインター表示位置の周囲に
   /// コライダーがあるか」（<see cref="Physics.OverlapSphere"/>）で行う。
@@ -87,11 +88,9 @@ namespace DemonLordHR.HandTracking
     }
 
     /// <summary>
-    /// 指先の位置をカメラのビューポート座標に投影し（位置ベース、向き不使用）、
+    /// MediaPipeの人差し指先の正規化座標をそのままカメラのビューポート座標として使い（向き不使用）、
     /// その視点座標を通るレイと「UI矩形が乗っている平面」との交点をポインター位置にする。
-    /// GetWorldCorners等でUI矩形のサイズから逆算する方式だと、UI矩形の実際の大きさ・位置が
-    /// カメラの視野角にぴったり一致していない限り中心以外がズレるが、
-    /// この方式はカメラの投影計算そのものを使うため、UI矩形のサイズに関わらず
+    /// カメラの投影計算そのものを使うため、UI矩形のサイズに関わらず
     /// 「画面上で見えている位置」と実際にポインターが置かれる位置が必ず一致する。
     /// デバッグ時はマウスのスクリーン座標をそのままビューポート座標として使う。
     /// </summary>
@@ -101,26 +100,23 @@ namespace DemonLordHR.HandTracking
 
       if (_debugUseMouse)
       {
-        viewportX = Input.mousePosition.x / Mathf.Max(1f, Screen.width);
-        viewportY = Input.mousePosition.y / Mathf.Max(1f, Screen.height);
+        if (!TryGetMouseScreenPosition(out var mousePos))
+        {
+          SetPointerActive(false);
+          return;
+        }
+        viewportX = mousePos.x / Mathf.Max(1f, Screen.width);
+        viewportY = mousePos.y / Mathf.Max(1f, Screen.height);
       }
       else
       {
-        if (!TryGetFingertipWorldPosition(out var fingertipWorldPos))
+        if (_handTrackingController == null || !_handTrackingController.TryGetIndexFingertipViewport(_useRightHand, out var viewport))
         {
           SetPointerActive(false);
           return;
         }
-
-        var viewportPoint = _referenceCamera.WorldToViewportPoint(fingertipWorldPos);
-        if (viewportPoint.z <= 0f)
-        {
-          // カメラの後ろ側
-          SetPointerActive(false);
-          return;
-        }
-        viewportX = viewportPoint.x;
-        viewportY = viewportPoint.y;
+        viewportX = viewport.x;
+        viewportY = viewport.y;
       }
 
       if (_clampToUIRect)
@@ -161,12 +157,12 @@ namespace DemonLordHR.HandTracking
       if (_debugUseMouse)
       {
         var cam = _referenceCamera != null ? _referenceCamera : Camera.main;
-        if (cam == null)
+        if (cam == null || !TryGetMouseScreenPosition(out var mousePos))
         {
           SetPointerActive(false);
           return;
         }
-        var ray = cam.ScreenPointToRay(Input.mousePosition);
+        var ray = cam.ScreenPointToRay(mousePos);
         targetPos = Physics.Raycast(ray, out var hit, _maxDistance, _raycastMask)
           ? hit.point
           : ray.origin + ray.direction * _maxDistance;
@@ -183,6 +179,23 @@ namespace DemonLordHR.HandTracking
       SetPointerActive(true);
       ApplySmoothedPosition(targetPos);
       UpdateHoverTarget(FindTargetNear(_smoothedWorldPos.Value));
+    }
+
+    /// <summary>
+    /// 新Input System経由でマウスのスクリーン座標を取得する。
+    /// プロジェクトのActive Input Handlingが"Input System Package"のみの場合、
+    /// 旧UnityEngine.Input.mousePositionは例外を投げるため使わない。
+    /// </summary>
+    private bool TryGetMouseScreenPosition(out Vector2 screenPosition)
+    {
+      var mouse = Mouse.current;
+      if (mouse == null)
+      {
+        screenPosition = default;
+        return false;
+      }
+      screenPosition = mouse.position.ReadValue();
+      return true;
     }
 
     private bool TryGetFingertipWorldPosition(out Vector3 position)
