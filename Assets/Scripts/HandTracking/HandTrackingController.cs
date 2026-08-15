@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Diagnostics;
 using Mediapipe;
 using Mediapipe.Tasks.Components.Containers;
 using Mediapipe.Tasks.Core;
@@ -17,6 +18,15 @@ namespace DemonLordHR.HandTracking
   /// MediaPipe HandLandmarkerを起動し、検出結果（21ランドマーク×左右手）を
   /// 魔王の手モデル（HandBoneRig）にリターゲットする。
   /// 左手モデルのみをプレハブとして持ち、右手はスケールX反転でミラー生成する。
+  ///
+  /// リターゲット方式（回転駆動、レストポーズ基準）:
+  /// 各ボーンの「レスト状態（Awake時点の回転・ワールド前方向）」をキャッシュしておき、
+  /// 毎フレーム、そのレスト状態からの絶対回転として目標回転を再計算する。
+  /// 過去に動作実績のある実装（WritingHandBoneRig）と同じ考え方を採用している。
+  /// 相対回転を毎フレーム積み上げる方式だと、FromToRotationが軸まわりの回転(ロール)を
+  /// 拘束しないため誤差が蓄積して指が捻れていくが、常にレスト状態基準で計算し直すことで
+  /// 誤差が蓄積しない。
+  ///
   /// 検出結果は<see cref="OnHandLandmarkerResult"/>イベントとしても公開し、
   /// GestureRecognizer等が同じ検出結果を購読できるようにする（パイプラインは1本化）。
   /// </summary>
@@ -41,11 +51,32 @@ namespace DemonLordHR.HandTracking
     [SerializeField, Range(0f, 1f)] private float _minHandPresenceConfidence = 0.5f;
     [SerializeField, Range(0f, 1f)] private float _minTrackingConfidence = 0.5f;
 
-    [Header("リターゲット")]
-    [Tooltip("MediaPipeワールド座標(m)から手モデルへのスケール係数")]
+    [Header("リターゲット（位置・共通）")]
+    [Tooltip("MediaPipeワールド座標(m)から手モデルへのスケール係数（トラッキングカメラ未設定時のみ使用）")]
     [SerializeField] private float _worldLandmarkScale = 1f;
     [Tooltip("魔王の手モデルの表示可否（ゲーム世界に入るまでは非表示）")]
     [SerializeField] private bool _handsVisible;
+
+    [Header("手首位置トラッキング（画面と同じ範囲を直接マッピング）")]
+    [Tooltip("指定すると、指の正規化座標をこのカメラのビューポート座標へ直接マッピングして手首位置を決める" +
+      "（指を画面端まで動かせば手首も画面端まで動く）。未設定ならワールドランドマークを単純スケールして使う。")]
+    [SerializeField] private Camera _trackingCamera;
+    [Tooltip("トラッキングカメラからの距離。手首を配置したい距離に合わせる。")]
+    [SerializeField] private float _trackingDistanceFromCamera = 1.5f;
+
+    [Header("軸の向き（見た目が反転・上下逆に見える場合はここを調整）")]
+    [Tooltip("MediaPipeのX(右方向が正)を反転するか。カメラ映像のミラー設定と揃える。")]
+    [SerializeField] private bool _mirrorX;
+    [Tooltip("MediaPipeのY(下方向が正)の反転を無効化するか。通常はデフォルト(false)のままでUnityのY-upに変換される。")]
+    [SerializeField] private bool _mirrorY;
+    [Tooltip("奥行き(Z)の向きを反転するか。カメラに近づく/遠ざかる動きが逆に見える場合に切り替える。")]
+    [SerializeField] private bool _mirrorZ;
+
+    [Header("スムージング")]
+    [Tooltip("ボーン回転の追従の速さ（1に近いほど即座に追従）。レスト基準で毎フレーム再計算するため値を大きくしても捻れない。")]
+    [SerializeField, Range(0.01f, 1f)] private float _rotationSmoothing = 0.6f;
+    [Tooltip("手首位置の追従の速さ。")]
+    [SerializeField, Range(0.01f, 1f)] private float _positionSmoothing = 0.6f;
 
     [Header("MediaPipe初期化")]
     [Tooltip("シーンに\"Bootstrap\"という名前のGameObjectが無い場合に生成するプレハブ。" +
@@ -55,6 +86,8 @@ namespace DemonLordHR.HandTracking
     private HandLandmarker _taskApi;
     private HandBoneRig _leftHandInstance;
     private HandBoneRig _rightHandInstance;
+    private HandRetargetState _leftState;
+    private HandRetargetState _rightState;
     private TextureFramePool _textureFramePool;
     private Coroutine _runCoroutine;
 
@@ -84,12 +117,14 @@ namespace DemonLordHR.HandTracking
         _leftHandInstance = Instantiate(_leftHandPrefab, parent);
         _leftHandInstance.isRightHand = false;
         _leftHandInstance.name = "MaouHand_Left";
+        _leftState = new HandRetargetState(_leftHandInstance);
 
         _rightHandInstance = Instantiate(_leftHandPrefab, parent);
         _rightHandInstance.isRightHand = true;
         _rightHandInstance.name = "MaouHand_Right";
         var s = _rightHandInstance.transform.localScale;
         _rightHandInstance.transform.localScale = new Vector3(-Mathf.Abs(s.x), s.y, s.z);
+        _rightState = new HandRetargetState(_rightHandInstance);
       }
 
       HandsVisible = _handsVisible;
@@ -120,14 +155,16 @@ namespace DemonLordHR.HandTracking
 
       yield return AssetLoader.PrepareAssetAsync(_modelAssetPath);
 
+      // NOTE: VIDEOモード＋TryDetectForVideoによる同期取得を使う（過去に動作実績のある方式）。
+      // LIVE_STREAM＋非同期コールバックは、コールバックがどのスレッドで呼ばれるかに気を配る必要があり、
+      // 不要な複雑さの原因になっていた。
       var options = new HandLandmarkerOptions(
         new BaseOptions(_delegate, modelAssetPath: _modelAssetPath),
-        runningMode: VisionRunningMode.LIVE_STREAM,
+        runningMode: VisionRunningMode.VIDEO,
         numHands: _numHands,
         minHandDetectionConfidence: _minHandDetectionConfidence,
         minHandPresenceConfidence: _minHandPresenceConfidence,
-        minTrackingConfidence: _minTrackingConfidence,
-        resultCallback: OnMediaPipeResult);
+        minTrackingConfidence: _minTrackingConfidence);
 
       _taskApi = HandLandmarker.CreateFromOptions(options, GpuManager.GpuResources);
 
@@ -147,7 +184,8 @@ namespace DemonLordHR.HandTracking
       var flipVertically = transformationOptions.flipVertically;
       var imageProcessingOptions = new ImageProcessingOptions(rotationDegrees: (int)transformationOptions.rotationAngle);
 
-      var startMillisec = (long)(Time.realtimeSinceStartupAsDouble * 1000);
+      var stopwatch = Stopwatch.StartNew();
+      var result = HandLandmarkerResult.Alloc(_numHands);
 
       while (true)
       {
@@ -169,55 +207,12 @@ namespace DemonLordHR.HandTracking
         var image = textureFrame.BuildCPUImage();
         textureFrame.Release();
 
-        var timestampMillisec = (long)(Time.realtimeSinceStartupAsDouble * 1000) - startMillisec;
-        _taskApi.DetectAsync(image, timestampMillisec, imageProcessingOptions);
+        if (_taskApi.TryDetectForVideo(image, stopwatch.ElapsedMilliseconds, imageProcessingOptions, ref result))
+        {
+          OnHandLandmarkerResult?.Invoke(result);
+          RetargetToBones(result);
+        }
       }
-    }
-
-    private void OnMediaPipeResult(HandLandmarkerResult result, Image image, long timestampMillisec)
-    {
-      // MediaPipeのコールバックはワーカースレッドから来る可能性があるため、
-      // メインスレッドで処理するようにキューイングする。
-      _pendingResult = result;
-      _hasPendingResult = true;
-    }
-
-    private HandLandmarkerResult _pendingResult;
-    private volatile bool _hasPendingResult;
-
-    private void Update()
-    {
-      if (!_hasPendingResult) return;
-      _hasPendingResult = false;
-
-      OnHandLandmarkerResult?.Invoke(_pendingResult);
-      RetargetToBones(_pendingResult);
-    }
-
-    private void RetargetToBones(HandLandmarkerResult result)
-    {
-      if (result.handWorldLandmarks == null) return;
-
-      for (var i = 0; i < result.handWorldLandmarks.Count; i++)
-      {
-        var isRight = IsRightHand(result, i);
-        var rig = isRight ? _rightHandInstance : _leftHandInstance;
-        if (rig == null || rig.wristRoot == null) continue;
-
-        ApplyLandmarksToRig(rig, result.handWorldLandmarks[i]);
-      }
-    }
-
-    /// <summary>
-    /// MediaPipeのhandedness分類は「画面に映る手」基準のため、
-    /// セルフィー視点（フロントカメラ相当）を前提に判定する。
-    /// </summary>
-    private bool IsRightHand(HandLandmarkerResult result, int index)
-    {
-      if (result.handedness == null || index >= result.handedness.Count) return false;
-      var classifications = result.handedness[index];
-      if (classifications.categories == null || classifications.categories.Count == 0) return false;
-      return classifications.categories[0].categoryName == "Right";
     }
 
     private Bootstrap FindOrCreateBootstrap()
@@ -237,32 +232,190 @@ namespace DemonLordHR.HandTracking
       return obj.GetComponent<Bootstrap>();
     }
 
+    private void RetargetToBones(HandLandmarkerResult result)
+    {
+      if (result.handWorldLandmarks == null) return;
+
+      for (var i = 0; i < result.handWorldLandmarks.Count; i++)
+      {
+        var isRight = IsRightHand(result, i);
+        var rig = isRight ? _rightHandInstance : _leftHandInstance;
+        var state = isRight ? _rightState : _leftState;
+        if (rig == null || state == null || rig.wristRoot == null) continue;
+
+        var worldLandmarks = result.handWorldLandmarks[i];
+        if (worldLandmarks.landmarks == null || worldLandmarks.landmarks.Count < 21) continue;
+
+        NormalizedLandmark? normalizedWrist = null;
+        if (result.handLandmarks != null && i < result.handLandmarks.Count &&
+            result.handLandmarks[i].landmarks != null && result.handLandmarks[i].landmarks.Count > 0)
+        {
+          normalizedWrist = result.handLandmarks[i].landmarks[0];
+        }
+
+        ApplyPose(rig, state, worldLandmarks, normalizedWrist);
+      }
+    }
+
+    /// <summary>
+    /// MediaPipeのhandedness分類は「画面に映る手」基準のため、
+    /// セルフィー視点（フロントカメラ相当）を前提に判定する。
+    /// </summary>
+    private bool IsRightHand(HandLandmarkerResult result, int index)
+    {
+      if (result.handedness == null || index >= result.handedness.Count) return false;
+      var classifications = result.handedness[index];
+      if (classifications.categories == null || classifications.categories.Count == 0) return false;
+      return classifications.categories[0].categoryName == "Right";
+    }
+
     private static readonly int[][] FingerLandmarkIndices =
     {
-      new[] { 1, 2, 3, 4 },   // Thumb
-      new[] { 5, 6, 7, 8 },   // Index
-      new[] { 9, 10, 11, 12 },  // Middle
-      new[] { 13, 14, 15, 16 }, // Ring
-      new[] { 17, 18, 19, 20 }, // Pinky
+      new[] { 0, 1, 2, 3, 4 },     // Thumb: Wrist, CMC, MCP, IP, TIP
+      new[] { 0, 5, 6, 7, 8 },     // Index: Wrist, MCP, PIP, DIP, TIP
+      new[] { 0, 9, 10, 11, 12 },  // Middle
+      new[] { 0, 13, 14, 15, 16 }, // Ring
+      new[] { 0, 17, 18, 19, 20 }, // Pinky
     };
 
-    private void ApplyLandmarksToRig(HandBoneRig rig, Landmarks worldLandmarks)
+    private void ApplyPose(HandBoneRig rig, HandRetargetState state, Landmarks worldLandmarks, NormalizedLandmark? normalizedWrist)
     {
-      if (worldLandmarks.landmarks == null || worldLandmarks.landmarks.Count == 0) return;
+      var lm = worldLandmarks.landmarks;
 
-      var wrist = worldLandmarks.landmarks[0];
-      rig.wristRoot.localPosition = new Vector3(wrist.x, wrist.y, wrist.z) * _worldLandmarkScale;
-
-      for (var f = 0; f < 5; f++)
+      // --- 手首位置 ---
+      if (_trackingCamera != null && normalizedWrist.HasValue)
       {
-        var finger = rig.GetFinger(f);
-        var indices = FingerLandmarkIndices[f];
-        for (var b = 0; b < finger.bones.Length; b++)
+        var nx = normalizedWrist.Value.x;
+        var ny = normalizedWrist.Value.y;
+        var viewportX = _mirrorX ? 1f - nx : nx;
+        var viewportY = _mirrorY ? ny : 1f - ny;
+        var viewportPoint = new Vector3(viewportX, viewportY, _trackingDistanceFromCamera);
+        var targetWorldPos = _trackingCamera.ViewportToWorldPoint(viewportPoint);
+        rig.wristRoot.position = Vector3.Lerp(rig.wristRoot.position, targetWorldPos, _positionSmoothing);
+      }
+      else
+      {
+        var wristTarget = ConvertToUnityVector(new Vector3(lm[0].x, lm[0].y, lm[0].z)) * _worldLandmarkScale;
+        rig.wristRoot.localPosition = Vector3.Lerp(rig.wristRoot.localPosition, wristTarget, _positionSmoothing);
+      }
+
+      // --- 手首の回転（傾き・ひねり） ---
+      ApplyWristRotation(rig, state, lm);
+
+      // --- 各指の回転（レスト基準の絶対回転） ---
+      var chains = new[] { rig.thumb, rig.index, rig.middle, rig.ring, rig.pinky };
+      for (var c = 0; c < chains.Length; c++)
+      {
+        var chain = chains[c];
+        if (chain?.bones == null) continue;
+
+        var indices = FingerLandmarkIndices[c];
+        var segmentCount = Mathf.Min(chain.bones.Length, indices.Length - 1);
+
+        for (var b = 0; b < segmentCount; b++)
         {
-          var bone = finger.bones[b];
+          var bone = chain.bones[b];
           if (bone == null) continue;
-          var lm = worldLandmarks.landmarks[indices[b]];
-          bone.localPosition = new Vector3(lm.x, lm.y, lm.z) * _worldLandmarkScale;
+
+          var from = ToVector3(lm[indices[b]]);
+          var to = ToVector3(lm[indices[b + 1]]);
+          var worldDir = ConvertToUnityVector(to - from);
+          if (worldDir.sqrMagnitude < 1e-8f) continue;
+
+          var restForward = state.CurrentWristDelta * state.RestForwardWorld[c][b];
+          var restRotation = state.CurrentWristDelta * state.RestRotations[c][b];
+          var targetRotation = Quaternion.FromToRotation(restForward, worldDir.normalized) * restRotation;
+          bone.rotation = Quaternion.Slerp(bone.rotation, targetRotation, _rotationSmoothing);
+        }
+      }
+    }
+
+    /// <summary>
+    /// 手首ボーン自体の回転を、手首→中指付け根（前方向）と
+    /// 人差し指付け根→小指付け根の外積（手のひらが向く方向）の2軸から求める。
+    /// </summary>
+    private void ApplyWristRotation(HandBoneRig rig, HandRetargetState state, System.Collections.Generic.List<Landmark> lm)
+    {
+      var wrist = ToVector3(lm[0]);
+      var middleMcp = ToVector3(lm[9]);
+      var indexMcp = ToVector3(lm[5]);
+      var pinkyMcp = ToVector3(lm[17]);
+
+      var forwardLandmark = middleMcp - wrist;
+      var palmLandmark = Vector3.Cross(indexMcp - wrist, pinkyMcp - wrist);
+
+      // 人差し指→小指の並び順は左右の手で鏡写しになるため、外積の符号も左右で反転する。
+      var shouldFlip = rig.isRightHand;
+      if (rig.invertPalmDirection) shouldFlip = !shouldFlip;
+      if (shouldFlip) palmLandmark = -palmLandmark;
+
+      var worldForward = ConvertToUnityVector(forwardLandmark);
+      var worldPalm = ConvertToUnityVector(palmLandmark);
+      if (worldForward.sqrMagnitude < 1e-8f || worldPalm.sqrMagnitude < 1e-8f) return;
+
+      var currentBasis = Quaternion.LookRotation(worldPalm, worldForward);
+      var targetRotation = currentBasis * state.WristRestOffset;
+      rig.wristRoot.rotation = Quaternion.Slerp(rig.wristRoot.rotation, targetRotation, _rotationSmoothing);
+
+      state.CurrentWristDelta = rig.wristRoot.rotation * Quaternion.Inverse(state.WristRestRotationRaw);
+    }
+
+    private static Vector3 ToVector3(Landmark landmark) => new Vector3(landmark.x, landmark.y, landmark.z);
+
+    /// <summary>
+    /// MediaPipeランドマーク空間のベクトルを、Unityワールド空間の方向ベクトルに変換する。
+    /// MediaPipeはX:右が正, Y:下が正、Zは値が小さいほどカメラに近い、という規約。
+    /// UnityはY-upなのでYはデフォルトで反転する。X/Zは見た目がおかしい場合にインスペクタで切り替える。
+    /// </summary>
+    private Vector3 ConvertToUnityVector(Vector3 landmarkVector)
+    {
+      var x = _mirrorX ? -landmarkVector.x : landmarkVector.x;
+      var y = _mirrorY ? landmarkVector.y : -landmarkVector.y;
+      var z = _mirrorZ ? -landmarkVector.z : landmarkVector.z;
+      return new Vector3(x, y, z);
+    }
+
+    /// <summary>
+    /// 1つの手モデルのレストポーズ（Awake時点の回転）をキャッシュし、
+    /// 毎フレームの絶対回転計算の基準として使う。
+    /// </summary>
+    private class HandRetargetState
+    {
+      public Quaternion[][] RestRotations;
+      public Vector3[][] RestForwardWorld;
+      public Quaternion WristRestRotationRaw;
+      public Quaternion WristRestOffset;
+      public Quaternion CurrentWristDelta = Quaternion.identity;
+
+      public HandRetargetState(HandBoneRig rig)
+      {
+        var chains = new[] { rig.thumb, rig.index, rig.middle, rig.ring, rig.pinky };
+        RestRotations = new Quaternion[chains.Length][];
+        RestForwardWorld = new Vector3[chains.Length][];
+
+        for (var c = 0; c < chains.Length; c++)
+        {
+          var boneCount = chains[c]?.bones?.Length ?? 0;
+          RestRotations[c] = new Quaternion[boneCount];
+          RestForwardWorld[c] = new Vector3[boneCount];
+
+          for (var b = 0; b < boneCount; b++)
+          {
+            var bone = chains[c].bones[b];
+            if (bone == null) continue;
+
+            RestRotations[c][b] = bone.rotation;
+            RestForwardWorld[c][b] = bone.TransformDirection(rig.boneLocalForwardAxis);
+          }
+        }
+
+        if (rig.wristRoot != null)
+        {
+          WristRestRotationRaw = rig.wristRoot.rotation;
+          var restForward = rig.wristRoot.TransformDirection(rig.boneLocalForwardAxis);
+          var restPalm = rig.wristRoot.TransformDirection(rig.wristLocalPalmAxis);
+          var basis = Quaternion.LookRotation(restPalm, restForward);
+          WristRestOffset = Quaternion.Inverse(basis) * rig.wristRoot.rotation;
         }
       }
     }

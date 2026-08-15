@@ -38,6 +38,11 @@ namespace DemonLordHR.HandTracking
     [Tooltip("ポインター位置の平滑化にかける時間(秒)。0で平滑化なし、値が大きいほど滑らかだが遅延が増える")]
     [SerializeField] private float _smoothingTime = 0.08f;
 
+    [Header("デバッグ")]
+    [Tooltip("ONの間は手のトラッキングを無視し、マウスの位置でポインターを操作する。" +
+      "手のトラッキングとは無関係にUI/ゲームロジック側の動作確認をするための機能。")]
+    [SerializeField] private bool _debugUseMouse;
+
     private IPointerHoldTarget _currentTarget;
     private Vector3? _smoothedWorldPos;
 
@@ -61,23 +66,17 @@ namespace DemonLordHR.HandTracking
 
     private void Update()
     {
-      var rig = _useRightHand ? _handTrackingController?.RightHandInstance : _handTrackingController?.LeftHandInstance;
-      var indexFinger = rig != null ? rig.index : null;
-      var baseBone = indexFinger != null && indexFinger.bones.Length == 4 ? indexFinger.bones[0] : null;
-      var tip = indexFinger != null && indexFinger.bones.Length == 4 ? indexFinger.bones[3] : null;
+      Vector3 origin, direction;
 
-      if (tip == null || baseBone == null)
+      if (_debugUseMouse)
       {
-        SetPointerActive(false);
-        return;
+        if (!TryGetMouseRay(out origin, out direction))
+        {
+          SetPointerActive(false);
+          return;
+        }
       }
-
-      var origin = tip.position;
-      // NOTE: リターゲット処理(HandTrackingController)は各ボーンのlocalPositionしか更新しておらず、
-      // localRotationは更新していないため、tip.forward(=ボーンの回転)は常に一定で使えない。
-      // 代わりに「人差し指の付け根→指先」の実際の位置ベクトルから向きを求める。
-      var direction = (tip.position - baseBone.position).normalized;
-      if (direction.sqrMagnitude < 0.0001f)
+      else if (!TryGetHandRay(out origin, out direction))
       {
         SetPointerActive(false);
         return;
@@ -91,6 +90,39 @@ namespace DemonLordHR.HandTracking
       {
         UpdateUsingColliderRaycast(origin, direction);
       }
+    }
+
+    /// <summary>
+    /// 手首→指先のベクトルから向きを求める。付け根(MCP)→指先より基線が長く、
+    /// 検出ノイズによる角度のブレが小さいため、手首を起点にしている。
+    /// </summary>
+    private bool TryGetHandRay(out Vector3 origin, out Vector3 direction)
+    {
+      origin = default;
+      direction = default;
+
+      var rig = _useRightHand ? _handTrackingController?.RightHandInstance : _handTrackingController?.LeftHandInstance;
+      var tip = rig != null ? rig.IndexTip : null;
+      var wrist = rig != null ? rig.wristRoot : null;
+      if (tip == null || wrist == null) return false;
+
+      origin = tip.position;
+      direction = (tip.position - wrist.position).normalized;
+      return direction.sqrMagnitude > 0.0001f;
+    }
+
+    private bool TryGetMouseRay(out Vector3 origin, out Vector3 direction)
+    {
+      origin = default;
+      direction = default;
+
+      var cam = _referenceCamera != null ? _referenceCamera : Camera.main;
+      if (cam == null) return false;
+
+      var ray = cam.ScreenPointToRay(Input.mousePosition);
+      origin = ray.origin;
+      direction = ray.direction;
+      return true;
     }
 
     /// <summary>
