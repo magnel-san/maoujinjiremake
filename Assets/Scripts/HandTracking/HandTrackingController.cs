@@ -68,13 +68,13 @@ namespace DemonLordHR.HandTracking
 
     [Header("軸の向き（見た目が反転・上下逆に見える場合はここを調整）")]
     [Tooltip("MediaPipeのX(右方向が正)を反転するか。カメラ映像のミラー設定と揃える。" +
-      "内カメラ（フロントカメラ）は鏡像になるため、デフォルトでON。")]
-    [SerializeField] private bool _mirrorX = true;
+      "左右の判定自体はhandedness側で別途補正済みなので、これはfalseで捻れが無いことを確認済み。")]
+    [SerializeField] private bool _mirrorX;
     [Tooltip("MediaPipeのY(下方向が正)の反転を無効化するか。通常はデフォルト(false)のままでUnityのY-upに変換される。")]
     [SerializeField] private bool _mirrorY;
     [Tooltip("奥行き(Z)の向きを反転するか。指を握る/伸ばす向きが逆に見える場合に切り替える。" +
-      "MediaPipeのZ符号は未検証の推測だったため、デフォルトでON。")]
-    [SerializeField] private bool _mirrorZ = true;
+      "実機確認の結果falseで捻れが無いことを確認済み。")]
+    [SerializeField] private bool _mirrorZ;
 
     [Header("スムージング")]
     [Tooltip("ボーン回転の追従の速さ（1に近いほど即座に追従）。レスト基準で毎フレーム再計算するため値を大きくしても捻れない。")]
@@ -269,6 +269,12 @@ namespace DemonLordHR.HandTracking
 
     private void RetargetToBones(HandLandmarkerResult result)
     {
+      // その回検出されなかった手のキャッシュは必ずクリアする。クリアしないと、
+      // 一度でも検出された手のデータがいつまでも残り続け、後から別の手だけを映しても
+      // 古いキャッシュの方が優先され続けてしまう（フォールバックが機能しない）。
+      _leftIndexTipViewport = null;
+      _rightIndexTipViewport = null;
+
       if (result.handWorldLandmarks == null) return;
 
       for (var i = 0; i < result.handWorldLandmarks.Count; i++)
