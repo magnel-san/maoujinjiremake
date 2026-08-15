@@ -384,7 +384,8 @@ namespace DemonLordHR.HandTracking
       var palmLandmark = Vector3.Cross(indexMcp - wrist, pinkyMcp - wrist);
 
       // 人差し指→小指の並び順は左右の手で鏡写しになるため、外積の符号も左右で反転する。
-      var shouldFlip = rig.isRightHand;
+      // （左手のときにflipする。過去に動作実績のある実装と同じ条件。）
+      var shouldFlip = !rig.isRightHand;
       if (rig.invertPalmDirection) shouldFlip = !shouldFlip;
       if (shouldFlip) palmLandmark = -palmLandmark;
 
