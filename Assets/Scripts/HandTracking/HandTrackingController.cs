@@ -300,15 +300,16 @@ namespace DemonLordHR.HandTracking
     }
 
     /// <summary>
-    /// MediaPipeのhandedness分類は「画面に映る手」基準のため、
-    /// セルフィー視点（フロントカメラ相当）を前提に判定する。
+    /// MediaPipeのhandedness分類は「入力画像が鏡像（フロントカメラの自撮り表示）である」ことを前提に
+    /// Left/Rightを出力する仕様。このプロジェクトのパイプラインはその前提通りに鏡像化されていないため、
+    /// 実際の手と分類結果が左右逆になる。そのため判定を反転させている。
     /// </summary>
     private bool IsRightHand(HandLandmarkerResult result, int index)
     {
       if (result.handedness == null || index >= result.handedness.Count) return false;
       var classifications = result.handedness[index];
       if (classifications.categories == null || classifications.categories.Count == 0) return false;
-      return classifications.categories[0].categoryName == "Right";
+      return classifications.categories[0].categoryName == "Left";
     }
 
     private static readonly int[][] FingerLandmarkIndices =

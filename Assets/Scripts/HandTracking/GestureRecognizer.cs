@@ -102,12 +102,15 @@ namespace DemonLordHR.HandTracking
       Evaluate();
     }
 
+    /// MediaPipeのhandedness分類は「入力画像が鏡像である」ことを前提とするため、
+    /// このプロジェクトのパイプラインでは実際の手と左右が逆になる。HandTrackingControllerと
+    /// 同じく判定を反転させ、両者で左右の扱いを一致させる。
     private bool IsRightHand(HandLandmarkerResult result, int index)
     {
       if (result.handedness == null || index >= result.handedness.Count) return false;
       var classifications = result.handedness[index];
       if (classifications.categories == null || classifications.categories.Count == 0) return false;
-      return classifications.categories[0].categoryName == "Right";
+      return classifications.categories[0].categoryName == "Left";
     }
 
     private HandFrame BuildFrame(Landmarks worldLandmarks)
