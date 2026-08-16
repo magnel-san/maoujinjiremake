@@ -84,8 +84,9 @@ namespace DemonLordHR.HandTracking
 
     [Header("前腕の遅延追従（任意、HandBoneRig.forearmBoneが設定されている場合のみ有効）")]
     [Tooltip("前腕の回転が手首の回転に追いつく速さ（大きいほど速く追従＝遅延が少ない）。" +
-      "小さくすると手首だけが素早く曲がり、前腕がゆっくり追いかけてくるように見える。")]
-    [SerializeField, Range(0f, 20f)] private float _forearmFollowSpeed = 6f;
+      "小さくすると手首だけが素早く曲がり、前腕がゆっくり追いかけてくるように見える。" +
+      "上限は無いので、ほぼ即座に追従させたい場合は数百〜数千まで上げてよい。")]
+    [SerializeField] private float _forearmFollowSpeed = 6f;
 
     [Header("MediaPipe初期化")]
     [Tooltip("シーンに\"Bootstrap\"という名前のGameObjectが無い場合に生成するプレハブ。" +
@@ -105,6 +106,13 @@ namespace DemonLordHR.HandTracking
 
     public HandBoneRig LeftHandInstance => _leftHandInstance;
     public HandBoneRig RightHandInstance => _rightHandInstance;
+
+    /// <summary>前腕が手首の回転に追いつく速さ。実行時にも変更できるようpublicにしている。</summary>
+    public float ForearmFollowSpeed
+    {
+      get => _forearmFollowSpeed;
+      set => _forearmFollowSpeed = Mathf.Max(0f, value);
+    }
 
     public bool HandsVisible
     {

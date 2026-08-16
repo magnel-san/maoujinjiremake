@@ -128,7 +128,7 @@ MonoBehaviour:
   wristLocalPalmAxis: {x: 0, y: 0, z: 1}
   invertPalmDirection: 0
   forearmBone: {fileID: 6246732215495496308}
-  forearmPositionOffset: {x: 0, y: 0, z: 0}
+  forearmPositionOffset: {x: 0, y: -0.4, z: 0}
 --- !u!4 &1006806440611451230 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8708586071057637713, guid: 30bae3866b326f74c861f50862bb679f, type: 3}
