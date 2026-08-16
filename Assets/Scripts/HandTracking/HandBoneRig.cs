@@ -45,9 +45,9 @@ namespace DemonLordHR.HandTracking
       "手首より遅らせて追従させることで、手首の部分で曲がっているように見せる演出に使う。" +
       "未設定でも他の機能には影響しない。")]
     public Transform forearmBone;
-    [Tooltip("前腕ボーンの位置を手首からどれだけずらすか（ワールド空間オフセット）。" +
-      "前腕の見た目が手首から離れて見える/めり込む場合に調整する。")]
-    public Vector3 forearmPositionOffset;
+    [Tooltip("手首から、指が伸びる方向(boneLocalForwardAxis)と逆向きに前腕をどれだけ離すか。" +
+      "手首の現在の回転を基準に毎フレーム計算するため、腕がどの向きを向いてもズレない。")]
+    public float forearmOffsetDistance;
 
     /// <summary>人差し指の指先ボーン。ポインターのレイキャスト起点に使う。</summary>
     public Transform IndexTip => index.bones != null && index.bones.Length == 4 ? index.bones[3] : null;

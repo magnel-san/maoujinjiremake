@@ -450,7 +450,11 @@ namespace DemonLordHR.HandTracking
     {
       if (rig.forearmBone == null || rig.wristRoot == null) return;
 
-      rig.forearmBone.position = rig.wristRoot.position + rig.forearmPositionOffset;
+      // 「指が伸びる方向」の逆向き（＝前腕が伸びている方向）を、
+      // 手首の現在の回転から毎フレーム計算し直す。ワールド空間の固定値ではないため、
+      // 腕がどの向きを向いても前腕は常に手首から正しい向きに追従する。
+      var backward = -rig.wristRoot.TransformDirection(rig.boneLocalForwardAxis.normalized);
+      rig.forearmBone.position = rig.wristRoot.position + backward * rig.forearmOffsetDistance;
 
       var t = 1f - Mathf.Exp(-_forearmFollowSpeed * Time.deltaTime);
       rig.forearmBone.rotation = Quaternion.Slerp(rig.forearmBone.rotation, rig.wristRoot.rotation, t);
