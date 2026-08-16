@@ -1026,7 +1026,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8639da4223ae429409df6ea6333723f8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.HandTracking.HandTrackingController
-  _leftHandPrefab: {fileID: 4941178061739490693, guid: b026cd6dd8e24d0439eb0a4d8bddb139, type: 3}
+  _leftHandPrefab: {fileID: 8129272783775304058, guid: 37d518360cf6d7849b27d38247633152, type: 3}
   _handsParent: {fileID: 0}
   _delegate: 0
   _modelAssetPath: hand_landmarker.bytes
@@ -1043,6 +1043,7 @@ MonoBehaviour:
   _mirrorZ: 1
   _rotationSmoothing: 0.6
   _positionSmoothing: 0.6
+  _forearmFollowSpeed: 6
   _bootstrapPrefab: {fileID: 1384033818}
 --- !u!1 &691425849
 GameObject:

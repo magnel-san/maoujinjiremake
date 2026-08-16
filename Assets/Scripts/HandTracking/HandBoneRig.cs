@@ -39,6 +39,16 @@ namespace DemonLordHR.HandTracking
     [Tooltip("手のひらの向きの基準符号を反転する。ほぼ180°捻れて見える場合に切り替える。")]
     public bool invertPalmDirection;
 
+    [Header("前腕（任意）")]
+    [Tooltip("手首より手前（肘側）の前腕ボーン。MediaPipeのHandLandmarkerは肘の情報を持たないため、" +
+      "本当に肘で曲げることはできない。代わりに、位置は手首にしっかり追従させつつ回転だけ" +
+      "手首より遅らせて追従させることで、手首の部分で曲がっているように見せる演出に使う。" +
+      "未設定でも他の機能には影響しない。")]
+    public Transform forearmBone;
+    [Tooltip("前腕ボーンの位置を手首からどれだけずらすか（ワールド空間オフセット）。" +
+      "前腕の見た目が手首から離れて見える/めり込む場合に調整する。")]
+    public Vector3 forearmPositionOffset;
+
     /// <summary>人差し指の指先ボーン。ポインターのレイキャスト起点に使う。</summary>
     public Transform IndexTip => index.bones != null && index.bones.Length == 4 ? index.bones[3] : null;
 

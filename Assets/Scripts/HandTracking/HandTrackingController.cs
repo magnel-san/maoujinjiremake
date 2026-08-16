@@ -82,6 +82,11 @@ namespace DemonLordHR.HandTracking
     [Tooltip("手首位置の追従の速さ。")]
     [SerializeField, Range(0.01f, 1f)] private float _positionSmoothing = 0.6f;
 
+    [Header("前腕の遅延追従（任意、HandBoneRig.forearmBoneが設定されている場合のみ有効）")]
+    [Tooltip("前腕の回転が手首の回転に追いつく速さ（大きいほど速く追従＝遅延が少ない）。" +
+      "小さくすると手首だけが素早く曲がり、前腕がゆっくり追いかけてくるように見える。")]
+    [SerializeField, Range(0f, 20f)] private float _forearmFollowSpeed = 6f;
+
     [Header("MediaPipe初期化")]
     [Tooltip("シーンに\"Bootstrap\"という名前のGameObjectが無い場合に生成するプレハブ。" +
       "Assets/MediaPipeUnity/Samples/Resources/Bootstrap.prefab を指定する。")]
@@ -365,6 +370,9 @@ namespace DemonLordHR.HandTracking
       // --- 手首の回転（傾き・ひねり） ---
       ApplyWristRotation(rig, state, lm);
 
+      // --- 前腕（任意）：位置は手首にしっかり追従、回転だけ遅らせて手首が曲がって見えるようにする ---
+      ApplyForearmFollow(rig);
+
       // --- 各指の回転（レスト基準の絶対回転） ---
       var chains = new[] { rig.thumb, rig.index, rig.middle, rig.ring, rig.pinky };
       for (var c = 0; c < chains.Length; c++)
@@ -422,6 +430,22 @@ namespace DemonLordHR.HandTracking
       rig.wristRoot.rotation = Quaternion.Slerp(rig.wristRoot.rotation, targetRotation, _rotationSmoothing);
 
       state.CurrentWristDelta = rig.wristRoot.rotation * Quaternion.Inverse(state.WristRestRotationRaw);
+    }
+
+    /// <summary>
+    /// 前腕ボーン（任意）の追従処理。MediaPipeのHandLandmarkerは肘の情報を持たないため、
+    /// 前腕を独立して正しく曲げることはできない。代わりに、位置は手首にしっかり追従させて
+    /// 関節が離れて見えないようにしつつ、回転だけ手首より遅らせて追従させることで、
+    /// 「手首の部分で曲がっている」ように見える演出にする。
+    /// </summary>
+    private void ApplyForearmFollow(HandBoneRig rig)
+    {
+      if (rig.forearmBone == null || rig.wristRoot == null) return;
+
+      rig.forearmBone.position = rig.wristRoot.position + rig.forearmPositionOffset;
+
+      var t = 1f - Mathf.Exp(-_forearmFollowSpeed * Time.deltaTime);
+      rig.forearmBone.rotation = Quaternion.Slerp(rig.forearmBone.rotation, rig.wristRoot.rotation, t);
     }
 
     private static Vector3 ToVector3(Landmark landmark) => new Vector3(landmark.x, landmark.y, landmark.z);
