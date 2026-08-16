@@ -70,11 +70,11 @@ namespace DemonLordHR.HandTracking
     [Tooltip("MediaPipeのX(右方向が正)を反転するか。カメラ映像のミラー設定と揃える。" +
       "左右の判定自体はhandedness側で別途補正済みなので、これはfalseで捻れが無いことを確認済み。")]
     [SerializeField] private bool _mirrorX;
-    [Tooltip("MediaPipeのY(下方向が正)の反転を無効化するか。通常はデフォルト(false)のままでUnityのY-upに変換される。")]
-    [SerializeField] private bool _mirrorY;
+    [Tooltip("MediaPipeのY(下方向が正)の反転を無効化するか。実機確認の結果trueでモデルが正しくなることを確認済み。")]
+    [SerializeField] private bool _mirrorY = true;
     [Tooltip("奥行き(Z)の向きを反転するか。指を握る/伸ばす向きが逆に見える場合に切り替える。" +
-      "実機確認の結果falseで捻れが無いことを確認済み。")]
-    [SerializeField] private bool _mirrorZ;
+      "実機確認の結果trueでモデルが正しくなることを確認済み。")]
+    [SerializeField] private bool _mirrorZ = true;
 
     [Header("スムージング")]
     [Tooltip("ボーン回転の追従の速さ（1に近いほど即座に追従）。レスト基準で毎フレーム再計算するため値を大きくしても捻れない。")]
@@ -308,11 +308,17 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    /// <summary>MediaPipeの正規化座標(X:右が1,Y:下が1)を、ビューポート座標(X:右が1,Y:上が1)に変換する。</summary>
+    /// <summary>
+    /// MediaPipeの正規化座標(X:右が1,Y:下が1)を、ビューポート座標(X:右が1,Y:上が1)に変換する。
+    /// Y方向の反転はUnityのビューポート規約に合わせるための固定変換であり、
+    /// 3Dボーンの回転計算に使う_mirrorYとは無関係（そちらは3D方向ベクトル再構成用の別設定）。
+    /// ここで_mirrorYを共有すると、3D側のために_mirrorYをtrueにした途端、
+    /// ポインターや手首位置の上下が逆になってしまうため、意図的に別扱いにしている。
+    /// </summary>
     private Vector2 ToViewport(NormalizedLandmark lm)
     {
       var x = _mirrorX ? 1f - lm.x : lm.x;
-      var y = _mirrorY ? lm.y : 1f - lm.y;
+      var y = 1f - lm.y;
       return new Vector2(x, y);
     }
 

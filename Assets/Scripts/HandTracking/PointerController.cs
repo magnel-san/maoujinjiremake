@@ -44,8 +44,9 @@ namespace DemonLordHR.HandTracking
     [SerializeField] private float _maxDistance = 50f;
 
     [Header("共通")]
-    [Tooltip("右手・左手のどちらの人差し指をポインターに使うか。現状は左手を認識させて使っているためデフォルトOFF。")]
-    [SerializeField] private bool _useRightHand;
+    [Tooltip("右手・左手のどちらの人差し指をポインターに優先して使うか。" +
+      "指定した方のデータが今無い場合は、もう片方の手にフォールバックする。")]
+    [SerializeField] private bool _useRightHand = true;
     [Tooltip("ポインター位置の平滑化にかける時間(秒)。0で平滑化なし、値が大きいほど滑らかだが遅延が増える")]
     [SerializeField] private float _smoothingTime = 0.08f;
 

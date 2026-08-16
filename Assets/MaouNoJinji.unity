@@ -1039,8 +1039,8 @@ MonoBehaviour:
   _trackingCamera: {fileID: 1317193723}
   _trackingDistanceFromCamera: 1.5
   _mirrorX: 0
-  _mirrorY: 0
-  _mirrorZ: 0
+  _mirrorY: 1
+  _mirrorZ: 1
   _rotationSmoothing: 0.6
   _positionSmoothing: 0.6
   _bootstrapPrefab: {fileID: 1384033818}
@@ -2311,7 +2311,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   _maxDistance: 50
-  _useRightHand: 0
+  _useRightHand: 1
   _smoothingTime: 0.08
   _debugUseMouse: 0
 --- !u!1 &1481423234
