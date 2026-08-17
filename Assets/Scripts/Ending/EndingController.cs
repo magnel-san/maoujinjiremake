@@ -21,6 +21,12 @@ namespace DemonLordHR.Ending
 
     private IStageImageGenerator _imageGenerator = new NullStageImageGenerator();
 
+    private void Awake()
+    {
+      if (_endButton != null) _endButton.gameObject.SetActive(false);
+      _commemorativePhotoRoot?.SetActive(false);
+    }
+
     public void SetImageGenerator(IStageImageGenerator generator)
     {
       _imageGenerator = generator ?? new NullStageImageGenerator();
@@ -45,11 +51,13 @@ namespace DemonLordHR.Ending
       if (_endButton != null)
       {
         _endButton.HoldSeconds = _settings != null ? _settings.endingHoldSeconds : 3f;
+        _endButton.gameObject.SetActive(true);
         var ended = false;
         System.Action onEnd = () => ended = true;
         _endButton.OnTriggered += onEnd;
         yield return new WaitUntil(() => ended);
         _endButton.OnTriggered -= onEnd;
+        _endButton.gameObject.SetActive(false);
       }
     }
 

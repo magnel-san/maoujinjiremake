@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a3ba15480fd70148888d87fb910d2a3, type: 3}
+  m_Name: UFO
+  m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Core.CharacterData
+  characterName: UFO
+  genre: 1
+  characterPrefab: {fileID: 4286767482902909677, guid: 1261d898d37ba7d48b4bc3c44da38c53, type: 3}
+  salary: 0
+  attackPower: 0
+  resumePages: []
+  aiPromptFragment: 

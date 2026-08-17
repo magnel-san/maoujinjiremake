@@ -11,8 +11,8 @@ namespace DemonLordHR.Recruitment
   /// <summary>
   /// 採用試験フェーズ（仕様書3章）のロジック全体を統括する。
   /// 1ジャンルにつき3体の候補キャラを登場させ、履歴書閲覧→採用/不採用の決定→
-  /// 終了演出までを進行する。3D演出（キャラプレハブの実際の見た目、スタンプ演出等）は
-  /// アセット未整備のためTODOのまま、進行ロジックとイベント発行に注力する。
+  /// 終了演出までを進行する。整列移動・吹き飛び・ハイライトは実装済みだが、
+  /// 本物のキャラモデル・履歴書アセットが揃うまでは簡易的な見た目（色ティント等）で代用している。
   /// </summary>
   public class RecruitmentPhaseController : MonoBehaviour
   {
@@ -28,6 +28,15 @@ namespace DemonLordHR.Recruitment
     [Tooltip("候補キャラの入室ルート（曲がり角の座標リスト、standPositionsと同数）")]
     [SerializeField] private List<Vector3>[] _entryWaypoints = new List<Vector3>[3];
 
+    [Header("履歴書")]
+    [Tooltip("ResumeOpenTrigger付きの履歴書オブジェクトのプレハブ")]
+    [SerializeField] private GameObject _resumePrefab;
+    [Tooltip("履歴書オブジェクトを、キャラの位置からどれだけずらして配置するか")]
+    [SerializeField] private Vector3 _resumeLocalOffset = new Vector3(0f, 1.2f, 0.5f);
+
+    private readonly Dictionary<CharacterData, GameObject> _characterInstances = new Dictionary<CharacterData, GameObject>();
+    private readonly Dictionary<CharacterData, GameObject> _resumeInstances = new Dictionary<CharacterData, GameObject>();
+
     public event Action<RecruitmentGenre> OnGenreStarted;
     public event Action<CharacterData> OnCharacterHired;
     public event Action<CharacterData> OnCharacterRejected;
@@ -40,6 +49,12 @@ namespace DemonLordHR.Recruitment
     private readonly List<CharacterData> _candidates = new List<CharacterData>();
     private readonly HashSet<CharacterData> _decided = new HashSet<CharacterData>();
     private bool _endRequested;
+
+    private void Awake()
+    {
+      // 採用試験を実施していない間はボタンを隠しておく。
+      if (_endInterviewButton != null) _endInterviewButton.gameObject.SetActive(false);
+    }
 
     private void OnEnable()
     {
@@ -91,8 +106,21 @@ namespace DemonLordHR.Recruitment
       }
       foreach (var c in entryCoroutines) yield return c;
 
+      if (_endInterviewButton != null) _endInterviewButton.gameObject.SetActive(true);
+
       // 3.5: 3体全員決定 or 「面接終了する」5秒保持のいずれかで終了
       yield return new WaitUntil(() => _endRequested || _decided.Count >= _candidates.Count);
+
+      if (_endInterviewButton != null) _endInterviewButton.gameObject.SetActive(false);
+
+      // 「面接終了する」で打ち切った場合、まだ決定していない候補は自動的に不採用扱いにする。
+      foreach (var candidate in _candidates)
+      {
+        if (!_decided.Contains(candidate))
+        {
+          HandleRejectIntent(candidate);
+        }
+      }
 
       // 3.6: 終了演出
       foreach (var candidate in _candidates)
@@ -132,6 +160,7 @@ namespace DemonLordHR.Recruitment
       if (character.characterPrefab == null || _doorSpawnPoint == null) yield break;
 
       var instance = Instantiate(character.characterPrefab, _doorSpawnPoint.position, _doorSpawnPoint.rotation);
+      _characterInstances[character] = instance;
       var path = instance.GetComponent<CharacterEntryPath>();
       if (path == null) path = instance.AddComponent<CharacterEntryPath>();
 
@@ -147,8 +176,19 @@ namespace DemonLordHR.Recruitment
       yield return StartCoroutine(path.WalkAsync());
       yield return new WaitUntil(() => done);
 
-      // TODO: 入室完了後、キャラの前に履歴書オブジェクトを出現させ、
-      // ポインター3秒保持で ResumeUIController.Open(character) を呼ぶトリガーを設置する。
+      SpawnResumeTrigger(character, instance);
+    }
+
+    private void SpawnResumeTrigger(CharacterData character, GameObject characterInstance)
+    {
+      if (_resumePrefab == null) return;
+
+      var resumeInstance = Instantiate(_resumePrefab, characterInstance.transform.position + _resumeLocalOffset, Quaternion.identity);
+      var trigger = resumeInstance.GetComponent<ResumeOpenTrigger>();
+      if (trigger == null) trigger = resumeInstance.AddComponent<ResumeOpenTrigger>();
+      trigger.Initialize(this, character, _settings != null ? _settings.resumeViewHoldSeconds : 3f);
+
+      _resumeInstances[character] = resumeInstance;
     }
 
     public void RequestOpenResume(CharacterData character)
@@ -162,6 +202,7 @@ namespace DemonLordHR.Recruitment
       _decided.Add(character);
       _hiredCharacters.Add(character);
       CurrentFunds -= character.salary;
+      HideResumeAndHighlight(character, _settings != null ? _settings.hireHighlightColor : Color.yellow);
       OnCharacterHired?.Invoke(character);
     }
 
@@ -169,6 +210,7 @@ namespace DemonLordHR.Recruitment
     {
       if (_decided.Contains(character)) return;
       _decided.Add(character);
+      HideResumeAndHighlight(character, _settings != null ? _settings.rejectHighlightColor : Color.red);
       OnCharacterRejected?.Invoke(character);
     }
 
@@ -177,20 +219,68 @@ namespace DemonLordHR.Recruitment
       _endRequested = true;
     }
 
+    /// <summary>3.3/3.4: 決定後、履歴書表示を非表示化し、対象キャラをハイライト色でティントする。</summary>
+    private void HideResumeAndHighlight(CharacterData character, Color highlightColor)
+    {
+      if (_resumeInstances.TryGetValue(character, out var resumeInstance) && resumeInstance != null)
+      {
+        resumeInstance.SetActive(false);
+      }
+
+      if (_characterInstances.TryGetValue(character, out var characterInstance) && characterInstance != null)
+      {
+        foreach (var renderer in characterInstance.GetComponentsInChildren<Renderer>())
+        {
+          renderer.material.color = highlightColor;
+        }
+      }
+    }
+
     private void PlayHireLineup(CharacterData character, int index)
     {
       if (_settings == null) return;
+      if (!_characterInstances.TryGetValue(character, out var instance) || instance == null) return;
+
       var origin = _settings.hiredLineupOrigin;
       var dir = _settings.hiredLineupDirection.normalized;
       var targetPos = origin + dir * (_settings.hiredLineupSpacing * index);
-      // TODO: 対応するインスタンスを targetPos へ整列移動させる演出を実装する。
+      StartCoroutine(MoveOverTime(instance.transform, targetPos, _settings.hiredLineupMoveDuration));
     }
 
     private void PlayRejectKnockback(CharacterData character)
     {
       if (_settings == null) return;
-      // TODO: 対応するインスタンスに settings.rejectKnockbackDirection / rejectKnockbackForce で
-      // 吹き飛び演出を適用する。
+      if (!_characterInstances.TryGetValue(character, out var instance) || instance == null) return;
+
+      var targetPos = instance.transform.position + _settings.rejectKnockbackDirection.normalized * _settings.rejectKnockbackForce;
+      StartCoroutine(KnockbackAndDestroy(instance, character, targetPos, _settings.rejectKnockbackDuration));
+    }
+
+    private static IEnumerator MoveOverTime(Transform target, Vector3 destination, float duration)
+    {
+      var start = target.position;
+      var elapsed = 0f;
+      duration = Mathf.Max(duration, 0.01f);
+
+      while (elapsed < duration)
+      {
+        elapsed += Time.deltaTime;
+        target.position = Vector3.Lerp(start, destination, elapsed / duration);
+        yield return null;
+      }
+
+      target.position = destination;
+    }
+
+    private IEnumerator KnockbackAndDestroy(GameObject instance, CharacterData character, Vector3 destination, float duration)
+    {
+      yield return MoveOverTime(instance.transform, destination, duration);
+
+      _characterInstances.Remove(character);
+      var resumeInstance = _resumeInstances.TryGetValue(character, out var r) ? r : null;
+      _resumeInstances.Remove(character);
+      if (resumeInstance != null) Destroy(resumeInstance);
+      Destroy(instance);
     }
   }
 }

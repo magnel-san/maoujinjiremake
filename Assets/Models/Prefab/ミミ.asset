@@ -10,14 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7a3ba15480fd70148888d87fb910d2a3, type: 3}
-  m_Name: SampleCharacterData
+  m_Name: "\u30DF\u30DF"
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Core.CharacterData
-  characterName: Sample
-  genre: 0
-  characterPrefab: {fileID: 0}
-  salary: 50
-  attackPower: 100
-  resumePages:
-  - {fileID: 0}
-  - {fileID: 0}
-  aiPromptFragment: sample
+  characterName: "\u30DF\u30DF"
+  genre: 4
+  characterPrefab: {fileID: 3552639433332507497, guid: 9e4f53d833db1f342915c2397d9ba497, type: 3}
+  salary: 0
+  attackPower: 0
+  resumePages: []
+  aiPromptFragment: 

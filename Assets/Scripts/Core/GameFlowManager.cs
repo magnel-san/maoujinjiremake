@@ -52,9 +52,21 @@ namespace DemonLordHR.Core
     private int _defenseSuccessCount;
     private int _gameOverCount;
 
+    private void Awake()
+    {
+      // ゲーム開始時点で不要なUIは非表示にしておく。各フェーズの担当箇所が必要な時だけ表示する。
+      SetButtonActive(_titleStartButton, false);
+      SetButtonActive(_ruleReadyButton, false);
+    }
+
     private void Start()
     {
       StartCoroutine(RunGameLoopForever());
+    }
+
+    private static void SetButtonActive(CircularHoldButton button, bool active)
+    {
+      if (button != null) button.gameObject.SetActive(active);
     }
 
     private IEnumerator RunGameLoopForever()
@@ -69,7 +81,9 @@ namespace DemonLordHR.Core
     {
       CurrentState = GameState.Title;
       if (_handTrackingController != null) _handTrackingController.HandsVisible = false;
+      SetButtonActive(_titleStartButton, true);
       yield return WaitForButton(_titleStartButton);
+      SetButtonActive(_titleStartButton, false);
 
       CurrentState = GameState.RuleExplanation;
       // TODO: ルール説明画像UIを表示する
@@ -77,7 +91,9 @@ namespace DemonLordHR.Core
       {
         _ruleReadyButton.HoldSeconds = _settings != null ? _settings.readyHoldSeconds : 3f;
       }
+      SetButtonActive(_ruleReadyButton, true);
       yield return WaitForButton(_ruleReadyButton);
+      SetButtonActive(_ruleReadyButton, false);
 
       if (_handTrackingController != null) _handTrackingController.HandsVisible = true;
 
@@ -146,10 +162,16 @@ namespace DemonLordHR.Core
         yield break;
       }
 
-      var count = Mathf.Min(_settings.recruitmentCycleCount, _settings.availableGenres.Count);
+      // availableGenresから重複無しでランダムにrecruitmentCycleCount個選ぶ。
+      var pool = new List<RecruitmentGenre>(_settings.availableGenres);
+      var count = Mathf.Min(_settings.recruitmentCycleCount, pool.Count);
+      var rng = new System.Random();
+
       for (var i = 0; i < count; i++)
       {
-        yield return _settings.availableGenres[i];
+        var index = rng.Next(pool.Count);
+        yield return pool[index];
+        pool.RemoveAt(index);
       }
     }
 

@@ -30,6 +30,8 @@ MonoBehaviour:
   hiredLineupOrigin: {x: 0, y: 0, z: 0}
   hiredLineupDirection: {x: 1, y: 0, z: 0}
   hiredLineupSpacing: 2
+  hiredLineupMoveDuration: 1.5
+  rejectKnockbackDuration: 0.6
   characterEntryDuration: 4
   defaultMinigameTimeLimit: 60
   flightRevivalDivisor: 100
@@ -40,4 +42,19 @@ MonoBehaviour:
   endingHoldSeconds: 3
   availableGenres: 000000000100000002000000030000000400000005000000060000000700000008000000
   allCharacters:
-  - {fileID: 11400000, guid: 25960e4579a761c41afdd872917d734d, type: 2}
+  - {fileID: 11400000, guid: 0f4495dfcfe1a334cb5f25ee95132fd7, type: 2}
+  - {fileID: 11400000, guid: a4d1422a8776faa4d8068df2329616b8, type: 2}
+  - {fileID: 11400000, guid: 7e7b6c0e2ed07bd4893865c7b5c55350, type: 2}
+  - {fileID: 11400000, guid: 996257ea3b2383c4f9a97843dfc3ffc9, type: 2}
+  - {fileID: 11400000, guid: bdd48468bbe4a5943ae620cfbce8b6ad, type: 2}
+  - {fileID: 11400000, guid: c04f9995695be0d4aacbf35dde7c17ca, type: 2}
+  - {fileID: 11400000, guid: d52827d962f0e9447820d61df1f0d291, type: 2}
+  - {fileID: 11400000, guid: dbe03db9ac2d6d845bfe25302325abc3, type: 2}
+  - {fileID: 11400000, guid: 47762d7d2489ffb45b3c9188704d1856, type: 2}
+  - {fileID: 11400000, guid: 87929259b9aaca44c8d54ff4ed7d2ed7, type: 2}
+  - {fileID: 11400000, guid: 78c872b6028f88f4086ef705536b2e06, type: 2}
+  - {fileID: 11400000, guid: 05d2563da492142408dbe089684b9578, type: 2}
+  - {fileID: 11400000, guid: d4591734afe138a41941507f2676eaf0, type: 2}
+  - {fileID: 11400000, guid: 76712fcf1ed275f4ca8a08b181172f0b, type: 2}
+  - {fileID: 11400000, guid: c764af11f352d024f82738b25467cf9b, type: 2}
+  - {fileID: 11400000, guid: 489f68f3e560f1349b4bce8f4053261c, type: 2}

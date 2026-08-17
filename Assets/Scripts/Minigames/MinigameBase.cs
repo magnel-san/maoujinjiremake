@@ -39,6 +39,12 @@ namespace DemonLordHR.Minigames
     public float RemainingTime => remainingTime;
     public bool IsRunning => isRunning;
 
+    protected virtual void Awake()
+    {
+      // 自分の準備完了ボタンは、実際にこのミニゲームが始まるまで隠しておく。
+      if (readyButton != null) readyButton.gameObject.SetActive(false);
+    }
+
     /// <summary>採用済みキャラのうち、このジャンルで使用するキャラを設定する。</summary>
     public void AssignCharacters(IEnumerable<CharacterData> characters)
     {
@@ -89,11 +95,13 @@ namespace DemonLordHR.Minigames
       if (readyButton != null)
       {
         readyButton.HoldSeconds = settings != null ? settings.readyHoldSeconds : 3f;
+        readyButton.gameObject.SetActive(true);
         var ready = false;
         Action onReady = () => ready = true;
         readyButton.OnTriggered += onReady;
         yield return new WaitUntil(() => ready);
         readyButton.OnTriggered -= onReady;
+        readyButton.gameObject.SetActive(false);
       }
     }
 

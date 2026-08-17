@@ -52,6 +52,10 @@ namespace DemonLordHR.Core
     public Vector3 hiredLineupDirection = Vector3.right;
     [Tooltip("採用キャラの整列間隔")]
     public float hiredLineupSpacing = 2f;
+    [Tooltip("採用キャラが整列位置まで移動する演出の所要時間")]
+    public float hiredLineupMoveDuration = 1.5f;
+    [Tooltip("不採用キャラが吹き飛ぶ演出の所要時間")]
+    public float rejectKnockbackDuration = 0.6f;
 
     [Header("キャラクター入室")]
     [Tooltip("全員の入室完了までの所要時間")]
