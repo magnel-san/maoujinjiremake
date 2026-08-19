@@ -56,6 +56,7 @@ namespace DemonLordHR.Recruitment
     private readonly List<CharacterData> _candidates = new List<CharacterData>();
     private readonly HashSet<CharacterData> _decided = new HashSet<CharacterData>();
     private bool _endRequested;
+    private bool _interviewInProgress;
 
     private void Awake()
     {
@@ -76,6 +77,8 @@ namespace DemonLordHR.Recruitment
         _resumeUIController.OnRejectIntent += HandleRejectIntent;
         _resumeUIController.OnStamped += HandleStamped;
         _resumeUIController.OnThrown += HandleThrown;
+        _resumeUIController.OnOpened += HandleResumeOpened;
+        _resumeUIController.OnClosed += HandleResumeClosed;
       }
     }
 
@@ -91,6 +94,8 @@ namespace DemonLordHR.Recruitment
         _resumeUIController.OnRejectIntent -= HandleRejectIntent;
         _resumeUIController.OnStamped -= HandleStamped;
         _resumeUIController.OnThrown -= HandleThrown;
+        _resumeUIController.OnOpened -= HandleResumeOpened;
+        _resumeUIController.OnClosed -= HandleResumeClosed;
       }
     }
 
@@ -118,12 +123,14 @@ namespace DemonLordHR.Recruitment
       }
       foreach (var c in entryCoroutines) yield return c;
 
-      if (_endInterviewButton != null) _endInterviewButton.gameObject.SetActive(true);
+      _interviewInProgress = true;
+      UpdateEndInterviewButtonVisibility();
 
       // 3.5: 3体全員決定 or 「面接終了する」5秒保持のいずれかで終了
       yield return new WaitUntil(() => _endRequested || _decided.Count >= _candidates.Count);
 
-      if (_endInterviewButton != null) _endInterviewButton.gameObject.SetActive(false);
+      _interviewInProgress = false;
+      UpdateEndInterviewButtonVisibility();
 
       // 「面接終了する」で打ち切った場合、まだ決定していない候補は自動的に不採用扱いにする。
       foreach (var candidate in _candidates)
@@ -239,6 +246,49 @@ namespace DemonLordHR.Recruitment
     private void HandleEndInterviewRequested()
     {
       _endRequested = true;
+    }
+
+    /// <summary>
+    /// 履歴書が開かれている間は「面接終了する」を押せないようにする。
+    /// 押せてしまうと、今まさにハンコ/パンチ待ちの候補が自動不採用で二重処理されてしまい、
+    /// UIが閉じずに残るバグの原因になる。
+    /// </summary>
+    private void HandleResumeOpened(CharacterData character)
+    {
+      UpdateEndInterviewButtonVisibility();
+      SetOtherResumeTriggersActive(false);
+    }
+
+    private void HandleResumeClosed()
+    {
+      UpdateEndInterviewButtonVisibility();
+      SetOtherResumeTriggersActive(true);
+    }
+
+    private void UpdateEndInterviewButtonVisibility()
+    {
+      if (_endInterviewButton == null) return;
+      var resumeOpen = _resumeUIController != null && _resumeUIController.IsOpen;
+      _endInterviewButton.gameObject.SetActive(_interviewInProgress && !resumeOpen);
+    }
+
+    /// <summary>履歴書を1つ開いている間、他の（まだ決定していない）候補の履歴書トリガーも
+    /// 触れないよう非表示にする。同時に複数の履歴書に触れると状態が壊れるため。</summary>
+    private void SetOtherResumeTriggersActive(bool active)
+    {
+      foreach (var kvp in _resumeInstances)
+      {
+        if (kvp.Value == null) continue;
+        if (active)
+        {
+          if (_decided.Contains(kvp.Key)) continue; // 決定済みのキャラは再表示しない
+          kvp.Value.SetActive(true);
+        }
+        else
+        {
+          kvp.Value.SetActive(false);
+        }
+      }
     }
 
     /// <summary>採用スタンプが確定した瞬間、すぐに整列演出を再生する。</summary>

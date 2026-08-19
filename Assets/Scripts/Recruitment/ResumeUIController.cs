@@ -65,6 +65,13 @@ namespace DemonLordHR.Recruitment
     public event Action<CharacterData> OnStamped;
     /// <summary>不採用の一撃確定（殴った）時に発火。吹き飛び演出のトリガーに使う。</summary>
     public event Action<CharacterData> OnThrown;
+    /// <summary>履歴書を開いた時に発火。開いている間は他の候補の履歴書トリガーや
+    /// 「面接終了する」ボタンを非表示にするために使う（複数の履歴書を同時に触れると状態が壊れるため）。</summary>
+    public event Action<CharacterData> OnOpened;
+    /// <summary>履歴書を閉じた時に発火。</summary>
+    public event Action OnClosed;
+
+    public bool IsOpen => _isOpen;
 
     private void Awake()
     {
@@ -136,6 +143,8 @@ namespace DemonLordHR.Recruitment
       ShowDecisionButtons(true);
       _handTrackingController?.SetRightHandStampMode(false);
       ApplyPageSprite();
+
+      OnOpened?.Invoke(character);
     }
 
     public void Close()
@@ -155,6 +164,8 @@ namespace DemonLordHR.Recruitment
       if (_backButton != null) _backButton.gameObject.SetActive(false);
       _handTrackingController?.SetRightHandStampMode(false);
       _currentCharacter = null;
+
+      OnClosed?.Invoke();
     }
 
     private void ShowDecisionButtons(bool show)

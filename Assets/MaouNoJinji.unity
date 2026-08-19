@@ -1506,9 +1506,9 @@ MonoBehaviour:
   _hoopScreenDistanceThreshold: 0.06
   _hoopHoldSeconds: 0.25
   _armsCrossHoldSeconds: 0.25
-  _punchVelocityThreshold: 2.2
-  _punchMinDistance: 0.18
-  _punchWindowSeconds: 0.25
+  _punchVelocityThreshold: 1.5
+  _punchMinDistance: 0.08
+  _punchWindowSeconds: 0.3
 --- !u!114 &681877492
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -59,13 +59,15 @@ namespace DemonLordHR.HandTracking
     [SerializeField] private float _armsCrossHoldSeconds = 0.25f;
 
     [Header("パンチ（右手突き出し／両拳交互）")]
-    [Tooltip("パンチとみなす最小速度（m/s）。数値を上げるほど、より素早く振らないと発火しなくなる。")]
-    [SerializeField] private float _punchVelocityThreshold = 2.2f;
+    [Tooltip("パンチとみなす最小速度（m/s）。数値を上げるほど、より素早く振らないと発火しなくなる。" +
+      "反応しない場合はまずこの値を下げて確認する。")]
+    [SerializeField] private float _punchVelocityThreshold = 1.5f;
     [Tooltip("パンチとみなす、直近の短い時間内での最小移動距離（m）。" +
-      "速度だけでなく実際に大きく腕を動かしたことも要求することで、小さな手先の動きでの誤発火を防ぐ。")]
-    [SerializeField] private float _punchMinDistance = 0.18f;
+      "速度だけでなく実際に大きく腕を動かしたことも要求することで、小さな手先の動きでの誤発火を防ぐ。" +
+      "MediaPipeの奥行き(Z)推定はX/Yより誤差が大きいため、あまり厳しくしすぎない。")]
+    [SerializeField] private float _punchMinDistance = 0.08f;
     [Tooltip("パンチの移動距離を測る時間窓（秒）")]
-    [SerializeField] private float _punchWindowSeconds = 0.25f;
+    [SerializeField] private float _punchWindowSeconds = 0.3f;
 
     public event Action<GestureType> OnGestureDetected;
 
