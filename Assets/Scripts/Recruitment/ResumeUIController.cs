@@ -185,7 +185,12 @@ namespace DemonLordHR.Recruitment
       ApplyPageSprite();
     }
 
-    /// <summary>「採用にする」ボタンの保持が完了した瞬間＝意思決定。履歴書は表示したままにする。</summary>
+    /// <summary>
+    /// 「採用にする」ボタンの保持が完了した瞬間。ここではまだ最終決定にはしない
+    /// （<see cref="OnHireIntent"/>は発火しない）。実際にハンコを振り下ろす(HammerSwingDown)まで
+    /// 待つことで、次の候補・次のジャンルへ進む条件（3体全員の決定）が、ジェスチャーを
+    /// やり切るまで満たされないようにする。
+    /// </summary>
     private void HandleHireButtonConfirmed()
     {
       if (!_isOpen || _decision != ResumeDecision.None) return;
@@ -193,15 +198,17 @@ namespace DemonLordHR.Recruitment
       _decision = ResumeDecision.Hired;
       ShowDecisionButtons(false);
       if (_backButton != null) _backButton.gameObject.SetActive(false);
-      OnHireIntent?.Invoke(_currentCharacter);
 
-      // ここで初めて右手をハンコ持ち手に切り替え、「ハンコを押せ」の合図を出す。
+      // ここで右手をハンコ持ち手に切り替え、「ハンコを押せ」の合図を出す。
       // ボタンへのポインター保持が終わった後なので、腕を振ってもポインター操作と競合しない。
       _handTrackingController?.SetRightHandStampMode(true);
       _stampPromptUI?.SetActive(true);
     }
 
-    /// <summary>「不採用にする」ボタンの保持が完了した瞬間＝意思決定。履歴書はいったん消す。</summary>
+    /// <summary>
+    /// 「不採用にする」ボタンの保持が完了した瞬間。こちらもまだ最終決定にはしない
+    /// （<see cref="OnRejectIntent"/>は発火しない）。実際に殴る(RightFistPunchOut)まで待つ。
+    /// </summary>
     private void HandleRejectButtonConfirmed()
     {
       if (!_isOpen || _decision != ResumeDecision.None) return;
@@ -210,7 +217,6 @@ namespace DemonLordHR.Recruitment
       ShowDecisionButtons(false);
       if (_backButton != null) _backButton.gameObject.SetActive(false);
       _resumeImageRoot?.SetActive(false);
-      OnRejectIntent?.Invoke(_currentCharacter);
 
       _punchPromptUI?.SetActive(true);
     }
@@ -249,6 +255,10 @@ namespace DemonLordHR.Recruitment
       _stampPromptUI?.SetActive(false);
       _stampImageRoot?.SetActive(true);
       _handTrackingController?.SetRightHandStampMode(false);
+
+      // ここで初めて最終決定として扱う。次の候補・次のジャンルへ進む条件は
+      // このイベントが発火するまで満たされない。
+      OnHireIntent?.Invoke(_currentCharacter);
       OnStamped?.Invoke(_currentCharacter);
 
       // 「履歴書は表示したまま」にしつつ、少し見せたら自動的に次の候補へ戻れるようにする。
@@ -259,6 +269,9 @@ namespace DemonLordHR.Recruitment
     private void ConfirmPunch()
     {
       _punchPromptUI?.SetActive(false);
+
+      // ここで初めて最終決定として扱う。
+      OnRejectIntent?.Invoke(_currentCharacter);
       OnThrown?.Invoke(_currentCharacter);
       Close();
     }
