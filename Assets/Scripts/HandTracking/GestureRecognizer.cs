@@ -19,14 +19,28 @@ namespace DemonLordHR.HandTracking
   /// 手モデルのボーン回転計算と同じ変換を通さないと、ミラー設定（Z軸反転等）が
   /// 手モデルとジェスチャー判定で食い違ってしまう。
   ///
-  /// 「ポーズが成立している間」を条件にする判定（輪っか・腕クロス・頭上等）は、
-  /// 単にその回だけ判定して発火すると、ポーズを保持している間ずっと（クールダウンのたびに）
-  /// 発火し続けてしまう。これを防ぐため、一定時間の保持(dwell)を要求し、かつ一度発火したら
-  /// ポーズが崩れる(release)まで再発火しないエッジトリガー方式にしている。
+  /// 誤検出・連続発火対策は大きく2段構えにしている。
+  /// 1. 信号平滑化：<see cref="OneEuroFilter"/>で手首等の座標を平滑化してから速度・角度を計算する。
+  ///    MediaPipeの生ランドマークは細かくジッターするため、平滑化しないとノイズが一瞬の「速い動き」
+  ///    として誤検出される。動き出しの追従を犠牲にしないよう、静止時ほど強く平滑化する適応型フィルタを使う。
+  /// 2. ステートマシン：
+  ///    - 「ポーズが成立している間」を条件にする判定（輪っか・腕クロス・頭上・両手を合わせる）は、
+  ///      一定時間の保持(dwell)を要求し、発火後はポーズが崩れる(release)まで再発火しないエッジトリガー方式。
+  ///    - 「振る」系の一発物（拍手・スワイプ・羽ばたき・両腕振り・ハンマー・パンチ）は<see cref="SwingDetector"/>で、
+  ///      速度がしきい値を超えて立ち上がり、ピークを迎えて下降し始めた瞬間に1回だけ発火し、
+  ///      手が収まる(exit)まで再アームしない（単発の閾値超えでの即時発火・連続発火を防ぐ）。
+  ///    - 連続回転（バルブ回し）だけは「止まるまで再発火しない」方式と相性が悪いため、
+  ///      <see cref="RotationTracker"/>で実際に回転した角度を積算し、一定角度ごとに繰り返し発火する。
   /// </summary>
   public class GestureRecognizer : MonoBehaviour
   {
     [SerializeField] private HandTrackingController _handTrackingController;
+
+    [Header("信号平滑化（One Euro Filter）")]
+    [Tooltip("静止時のジッター抑制の強さ。小さいほど滑らかになるが、動き出しの追従が遅れる。")]
+    [SerializeField] private float _filterMinCutoff = 1.0f;
+    [Tooltip("速い動きへの追従性。大きいほど素早い動きの遅延が減るが、その分ノイズ抑制が弱まる。")]
+    [SerializeField] private float _filterBeta = 0.5f;
 
     [Header("共通しきい値")]
     [Tooltip("同一ジェスチャーの連続発火を防ぐクールダウン秒数")]
@@ -69,6 +83,18 @@ namespace DemonLordHR.HandTracking
     [Tooltip("パンチの移動距離を測る時間窓（秒）")]
     [SerializeField] private float _punchWindowSeconds = 0.3f;
 
+    [Header("スイング系ジェスチャー共通（速度ピーク検出）")]
+    [Tooltip("拍手・スワイプ・羽ばたき・両腕振り・ハンマー・パンチに共通の再アーム条件。" +
+      "各しきい値に対する比率（0〜1）。ピーク検出後、速度がこの比率まで収まって初めて次の発火を受け付ける。" +
+      "大きいほど「振り切って完全に止まる」ことを要求するようになり、小さいほど素早い連続動作を許可しやすくなる。")]
+    [SerializeField, Range(0.05f, 0.9f)] private float _swingExitRatio = 0.35f;
+
+    [Header("バルブ回し（連続回転）")]
+    [Tooltip("1回発火とみなす累積回転角度（度）。小さいほど速く連射され、大きいほどしっかり回す必要がある。")]
+    [SerializeField] private float _valveRotationDegreesToFire = 300f;
+    [Tooltip("回転とみなす最低速度（m/s）。これより遅い動きは角度を積算しない（静止時のノイズ対策）")]
+    [SerializeField] private float _valveMinSpeed = 0.3f;
+
     public event Action<GestureType> OnGestureDetected;
 
     private readonly Dictionary<GestureType, float> _cooldownUntil = new Dictionary<GestureType, float>();
@@ -78,9 +104,11 @@ namespace DemonLordHR.HandTracking
     private HandFrame _prevLeft = HandFrame.Empty;
     private HandFrame _prevRight = HandFrame.Empty;
 
+    private HandFilterSet _leftFilter;
+    private HandFilterSet _rightFilter;
+
     private float _handsTogetherTimer;
-    private float _lastAltPunchHandSign;
-    private float _altPunchCooldownUntil;
+    private bool _handsTogetherArmed = true;
 
     private float _hoopHoldTimer;
     private bool _hoopArmed = true; // ポーズが崩れて初めて次の発火を許可する
@@ -92,6 +120,36 @@ namespace DemonLordHR.HandTracking
 
     private readonly WristTrace _rightPunchTrace = new WristTrace();
     private readonly WristTrace _leftPunchTrace = new WristTrace();
+
+    private SwingDetector _clapDetector;
+    private SwingDetector _rightSwipeDetector;
+    private SwingDetector _leftSwipeDetector;
+    private SwingDetector _wingFlapDetector;
+    private SwingDetector _armSwingDetector;
+    private SwingDetector _rightHammerDetector;
+    private SwingDetector _leftHammerDetector;
+    private SwingDetector _rightPunchDetector;
+    private SwingDetector _leftPunchDetector;
+    private RotationTracker _rightValveTracker;
+    private RotationTracker _leftValveTracker;
+
+    private void Awake()
+    {
+      _leftFilter = new HandFilterSet(_filterMinCutoff, _filterBeta);
+      _rightFilter = new HandFilterSet(_filterMinCutoff, _filterBeta);
+
+      _clapDetector = new SwingDetector(_fastVelocityThreshold * 0.5f, _swingExitRatio);
+      _rightSwipeDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
+      _leftSwipeDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
+      _wingFlapDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
+      _armSwingDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
+      _rightHammerDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
+      _leftHammerDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
+      _rightPunchDetector = new SwingDetector(_punchVelocityThreshold, _swingExitRatio);
+      _leftPunchDetector = new SwingDetector(_punchVelocityThreshold, _swingExitRatio);
+      _rightValveTracker = new RotationTracker(_valveMinSpeed, _valveRotationDegreesToFire);
+      _leftValveTracker = new RotationTracker(_valveMinSpeed, _valveRotationDegreesToFire);
+    }
 
     /// <summary>直近の短い時間窓での手首位置を記録し、実際にどれだけ大きく動いたか(Z方向の変位)を求める。
     /// 瞬間速度だけで判定すると、小さな手先の動きでも一瞬だけ速度が出て誤発火するため、
@@ -116,6 +174,215 @@ namespace DemonLordHR.HandTracking
       {
         if (_points.Count < 2) return 0f;
         return _points[_points.Count - 1].pos.z - _points[0].pos.z;
+      }
+    }
+
+    /// <summary>
+    /// One Euro Filter（適応型ローパスフィルタ）。MediaPipeランドマークの細かいジッターを抑えつつ、
+    /// 実際に速く動いた時は遅延を増やさず追従する（静止時は強く平滑化、動き出したら追従優先に切り替わる）。
+    /// 速度・角度の計算前段でこれを通すことで、ノイズによる瞬間的なスパイクが誤発火の原因になるのを防ぐ。
+    /// </summary>
+    private class OneEuroFilter
+    {
+      private readonly float _minCutoff;
+      private readonly float _beta;
+      private readonly float _dCutoff;
+      private bool _initialized;
+      private float _prevValue;
+      private float _prevDerivative;
+      private float _prevTime;
+
+      public OneEuroFilter(float minCutoff, float beta, float dCutoff = 1f)
+      {
+        _minCutoff = minCutoff;
+        _beta = beta;
+        _dCutoff = dCutoff;
+      }
+
+      public float Filter(float value, float time)
+      {
+        if (!_initialized)
+        {
+          _initialized = true;
+          _prevValue = value;
+          _prevDerivative = 0f;
+          _prevTime = time;
+          return value;
+        }
+
+        var dt = Mathf.Max(time - _prevTime, 0.0001f);
+        var derivative = (value - _prevValue) / dt;
+        var dAlpha = Alpha(_dCutoff, dt);
+        var smoothedDerivative = dAlpha * derivative + (1f - dAlpha) * _prevDerivative;
+
+        var cutoff = _minCutoff + _beta * Mathf.Abs(smoothedDerivative);
+        var alpha = Alpha(cutoff, dt);
+        var filtered = alpha * value + (1f - alpha) * _prevValue;
+
+        _prevValue = filtered;
+        _prevDerivative = smoothedDerivative;
+        _prevTime = time;
+        return filtered;
+      }
+
+      private static float Alpha(float cutoff, float dt)
+      {
+        var tau = 1f / (2f * Mathf.PI * Mathf.Max(cutoff, 0.0001f));
+        return 1f / (1f + tau / dt);
+      }
+    }
+
+    /// <summary>OneEuroFilterをXYZ独立に適用するVector3版。2D値（画面座標）はzに0を渡して流用する。</summary>
+    private class Vector3Filter
+    {
+      private readonly OneEuroFilter _x;
+      private readonly OneEuroFilter _y;
+      private readonly OneEuroFilter _z;
+
+      public Vector3Filter(float minCutoff, float beta)
+      {
+        _x = new OneEuroFilter(minCutoff, beta);
+        _y = new OneEuroFilter(minCutoff, beta);
+        _z = new OneEuroFilter(minCutoff, beta);
+      }
+
+      public Vector3 Filter(Vector3 v, float time) =>
+        new Vector3(_x.Filter(v.x, time), _y.Filter(v.y, time), _z.Filter(v.z, time));
+    }
+
+    /// <summary>片手ぶんの平滑化フィルタ一式。手首・指先・画面内高さ・画面内の親指/人差し指位置を持つ。</summary>
+    private class HandFilterSet
+    {
+      public readonly Vector3Filter Wrist;
+      public readonly Vector3Filter[] FingerTips;
+      public readonly OneEuroFilter ViewportY;
+      public readonly Vector3Filter ThumbScreen;
+      public readonly Vector3Filter IndexScreen;
+
+      public HandFilterSet(float minCutoff, float beta)
+      {
+        Wrist = new Vector3Filter(minCutoff, beta);
+        FingerTips = new[]
+        {
+          new Vector3Filter(minCutoff, beta), new Vector3Filter(minCutoff, beta), new Vector3Filter(minCutoff, beta),
+          new Vector3Filter(minCutoff, beta), new Vector3Filter(minCutoff, beta),
+        };
+        ViewportY = new OneEuroFilter(minCutoff, beta);
+        ThumbScreen = new Vector3Filter(minCutoff, beta);
+        IndexScreen = new Vector3Filter(minCutoff, beta);
+      }
+    }
+
+    /// <summary>
+    /// 「振る」系ジェスチャー共通のステートマシン。特徴量（速度等、常に0以上を想定）がしきい値を超えて
+    /// 立ち上がり、ピークを迎えて下降し始めた瞬間に1回だけtrueを返す。発火後は特徴量が退場しきい値まで
+    /// 収まる（＝手が実質止まる/戻る）まで再アームしない。単発の閾値超えで即発火する方式と違い、
+    /// ノイズによる瞬間的なスパイクにも、1回の振りの間に複数回発火することにも強い。
+    /// </summary>
+    private class SwingDetector
+    {
+      private readonly float _threshold;
+      private readonly float _exitThreshold;
+      private bool _rising;
+      private bool _armed = true;
+      private float _peak;
+
+      public SwingDetector(float threshold, float exitRatio)
+      {
+        _threshold = threshold;
+        _exitThreshold = threshold * Mathf.Clamp01(exitRatio);
+      }
+
+      /// <summary>毎フレーム特徴量を渡す。canEnterがfalseの間は新規の立ち上がりを開始しない
+      /// （例：拳の形でない、振り上げ済みでない、等の追加条件をかけるのに使う）。</summary>
+      public bool Update(float feature, bool canEnter = true)
+      {
+        if (!_armed)
+        {
+          if (feature < _exitThreshold) _armed = true;
+          return false;
+        }
+
+        if (!_rising)
+        {
+          if (canEnter && feature > _threshold)
+          {
+            _rising = true;
+            _peak = feature;
+          }
+          return false;
+        }
+
+        if (feature >= _peak)
+        {
+          _peak = feature;
+          return false;
+        }
+
+        // ピークを超えて下降し始めた＝1回の振りが完了した瞬間。
+        _rising = false;
+        _armed = false;
+        return true;
+      }
+
+      public void Reset()
+      {
+        _rising = false;
+        _armed = true;
+        _peak = 0f;
+      }
+    }
+
+    /// <summary>
+    /// 連続回転（バルブ回し）用。速度ベクトルの向きの変化を積算し、一定角度分回転したら1回発火する。
+    /// スイング系のように「一度止まるまで再発火しない」方式は、回し続ける動作とは相性が悪い（止まらないため）
+    /// ので、代わりに実際に回転した量に応じて繰り返し発火する方式にしている。
+    /// </summary>
+    private class RotationTracker
+    {
+      private readonly float _minSpeed;
+      private readonly float _degreesToFire;
+      private bool _hasPrevAngle;
+      private float _prevAngle;
+      private float _accumulatedDegrees;
+
+      public RotationTracker(float minSpeed, float degreesToFire)
+      {
+        _minSpeed = minSpeed;
+        _degreesToFire = Mathf.Max(degreesToFire, 10f);
+      }
+
+      public bool Update(Vector2 velocity)
+      {
+        if (velocity.magnitude < _minSpeed)
+        {
+          _hasPrevAngle = false; // 遅い/静止時は角度追跡をリセットし、ノイズでの積算を防ぐ
+          return false;
+        }
+
+        var angle = Mathf.Atan2(velocity.y, velocity.x) * Mathf.Rad2Deg;
+        if (!_hasPrevAngle)
+        {
+          _prevAngle = angle;
+          _hasPrevAngle = true;
+          return false;
+        }
+
+        _accumulatedDegrees += Mathf.Abs(Mathf.DeltaAngle(_prevAngle, angle));
+        _prevAngle = angle;
+
+        if (_accumulatedDegrees >= _degreesToFire)
+        {
+          _accumulatedDegrees = 0f;
+          return true;
+        }
+        return false;
+      }
+
+      public void Reset()
+      {
+        _hasPrevAngle = false;
+        _accumulatedDegrees = 0f;
       }
     }
 
@@ -180,15 +447,38 @@ namespace DemonLordHR.HandTracking
           normalizedLandmarks = result.handLandmarks[i].landmarks;
         }
 
-        var frame = BuildFrame(result.handWorldLandmarks[i], normalizedLandmarks);
+        var frame = BuildFrame(result.handWorldLandmarks[i], normalizedLandmarks, isRight ? _rightFilter : _leftFilter);
         if (isRight) newRight = frame; else newLeft = frame;
       }
+
+      var leftWasValid = _left.valid;
+      var rightWasValid = _right.valid;
 
       _left = newLeft.valid ? newLeft : HandFrame.Empty;
       _right = newRight.valid ? newRight : HandFrame.Empty;
 
       if (_left.valid) _leftPunchTrace.Add(_left.wrist, Time.time, _punchWindowSeconds); else _leftPunchTrace.Clear();
       if (_right.valid) _rightPunchTrace.Add(_right.wrist, Time.time, _punchWindowSeconds); else _rightPunchTrace.Clear();
+
+      // 手がロストした時は「振り」の途中状態を持ち越さない（再検出時に誤ってピーク完了扱いされるのを防ぐ）。
+      if (leftWasValid && !_left.valid)
+      {
+        _leftSwipeDetector.Reset();
+        _wingFlapDetector.Reset();
+        _armSwingDetector.Reset();
+        _leftHammerDetector.Reset();
+        _leftPunchDetector.Reset();
+        _leftValveTracker.Reset();
+      }
+      if (rightWasValid && !_right.valid)
+      {
+        _rightSwipeDetector.Reset();
+        _wingFlapDetector.Reset();
+        _armSwingDetector.Reset();
+        _rightHammerDetector.Reset();
+        _rightPunchDetector.Reset();
+        _rightValveTracker.Reset();
+      }
 
       Evaluate();
     }
@@ -204,7 +494,7 @@ namespace DemonLordHR.HandTracking
       return classifications.categories[0].categoryName == "Left";
     }
 
-    private HandFrame BuildFrame(Landmarks worldLandmarks, List<NormalizedLandmark> normalizedLandmarks)
+    private HandFrame BuildFrame(Landmarks worldLandmarks, List<NormalizedLandmark> normalizedLandmarks, HandFilterSet filters)
     {
       if (worldLandmarks.landmarks == null || worldLandmarks.landmarks.Count < 21) return HandFrame.Empty;
       if (_handTrackingController == null) return HandFrame.Empty;
@@ -212,20 +502,30 @@ namespace DemonLordHR.HandTracking
       var lm = worldLandmarks.landmarks;
       Vector3 V(int i) => _handTrackingController.ConvertToUnityVector(new Vector3(lm[i].x, lm[i].y, lm[i].z));
 
+      var time = Time.time;
       var frame = new HandFrame
       {
         valid = true,
-        wrist = V(0),
-        fingerTips = new[] { V(4), V(8), V(12), V(16), V(20) },
+        wrist = filters.Wrist.Filter(V(0), time),
+        fingerTips = new[]
+        {
+          filters.FingerTips[0].Filter(V(4), time),
+          filters.FingerTips[1].Filter(V(8), time),
+          filters.FingerTips[2].Filter(V(12), time),
+          filters.FingerTips[3].Filter(V(16), time),
+          filters.FingerTips[4].Filter(V(20), time),
+        },
         viewportY = 0.5f,
-        timestamp = Time.time,
+        timestamp = time,
       };
 
       if (normalizedLandmarks != null && normalizedLandmarks.Count > 8)
       {
-        frame.viewportY = 1f - normalizedLandmarks[0].y;
-        frame.thumbTipScreen = new Vector2(normalizedLandmarks[4].x, 1f - normalizedLandmarks[4].y);
-        frame.indexTipScreen = new Vector2(normalizedLandmarks[8].x, 1f - normalizedLandmarks[8].y);
+        frame.viewportY = filters.ViewportY.Filter(1f - normalizedLandmarks[0].y, time);
+        var thumb = filters.ThumbScreen.Filter(new Vector3(normalizedLandmarks[4].x, 1f - normalizedLandmarks[4].y, 0f), time);
+        var index = filters.IndexScreen.Filter(new Vector3(normalizedLandmarks[8].x, 1f - normalizedLandmarks[8].y, 0f), time);
+        frame.thumbTipScreen = new Vector2(thumb.x, thumb.y);
+        frame.indexTipScreen = new Vector2(index.x, index.y);
       }
 
       return frame;
@@ -343,125 +643,180 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    // 拍手のように両手を胸の前で近づけ離す（一定距離まで急接近した瞬間を1回とする）
+    // 拍手のように両手を胸の前で近づけ離す。両手首の接近速度がピークを迎えた瞬間を1回とする。
     private void DetectClapNarrow(float dt)
     {
-      if (!_left.valid || !_right.valid || !_prevLeft.valid || !_prevRight.valid) return;
+      if (!_left.valid || !_right.valid || !_prevLeft.valid || !_prevRight.valid)
+      {
+        _clapDetector.Reset();
+        return;
+      }
+
       var dist = Vector3.Distance(_left.wrist, _right.wrist);
       var prevDist = Vector3.Distance(_prevLeft.wrist, _prevRight.wrist);
-      var closingFast = (prevDist - dist) / dt > _fastVelocityThreshold * 0.5f;
-      if (closingFast && dist < _touchDistanceThreshold * 3f) TryFire(GestureType.ClapNarrow);
+      var closingSpeed = Mathf.Max((prevDist - dist) / dt, 0f);
+
+      if (_clapDetector.Update(closingSpeed) && dist < _touchDistanceThreshold * 3f)
+      {
+        TryFire(GestureType.ClapNarrow);
+      }
     }
 
-    // 手で横に払う／左右への腕振り（速度の水平成分の向きで判定）
+    // 手で横に払う／左右への腕振り。水平速度が主成分としてピークを迎えた瞬間を1回とする。
     private void DetectHorizontalSwipes(float dt)
     {
-      EvaluateSwipe(_right, _prevRight, dt);
-      EvaluateSwipe(_left, _prevLeft, dt);
+      EvaluateSwipe(_right, _prevRight, dt, _rightSwipeDetector);
+      EvaluateSwipe(_left, _prevLeft, dt, _leftSwipeDetector);
     }
 
-    private void EvaluateSwipe(in HandFrame hand, in HandFrame prev, float dt)
+    private void EvaluateSwipe(in HandFrame hand, in HandFrame prev, float dt, SwingDetector detector)
     {
-      var vel = Velocity(hand, prev, dt);
-      if (Mathf.Abs(vel.x) < _fastVelocityThreshold) return;
-      if (Mathf.Abs(vel.x) < Mathf.Abs(vel.y) || Mathf.Abs(vel.x) < Mathf.Abs(vel.z)) return;
+      if (!hand.valid || !prev.valid)
+      {
+        detector.Reset();
+        return;
+      }
 
-      TryFire(GestureType.SwipeSideways);
-      if (vel.x > 0) TryFire(GestureType.SwipeLeftToRight);
-      else TryFire(GestureType.SwipeRightToLeft);
+      var vel = Velocity(hand, prev, dt);
+      var dominant = Mathf.Abs(vel.x) > Mathf.Abs(vel.y) && Mathf.Abs(vel.x) > Mathf.Abs(vel.z);
+
+      if (detector.Update(Mathf.Abs(vel.x), dominant))
+      {
+        TryFire(GestureType.SwipeSideways);
+        if (vel.x > 0) TryFire(GestureType.SwipeLeftToRight);
+        else TryFire(GestureType.SwipeRightToLeft);
+      }
     }
 
-    // 腕を翼のように上下に振る（両手首の垂直速度が同符号で大きい）
+    // 腕を翼のように上下に振る。両手首の垂直速度が同符号で、そのピークを迎えた瞬間を1回とする。
     private void DetectWingFlap(float dt)
     {
-      if (!_left.valid || !_right.valid) return;
+      if (!_left.valid || !_right.valid)
+      {
+        _wingFlapDetector.Reset();
+        return;
+      }
+
       var lv = Velocity(_left, _prevLeft, dt);
       var rv = Velocity(_right, _prevRight, dt);
-      if (Mathf.Abs(lv.y) > _fastVelocityThreshold && Mathf.Abs(rv.y) > _fastVelocityThreshold && Mathf.Sign(lv.y) == Mathf.Sign(rv.y))
+      var matchedDirection = Mathf.Sign(lv.y) == Mathf.Sign(rv.y);
+      var feature = matchedDirection ? Mathf.Min(Mathf.Abs(lv.y), Mathf.Abs(rv.y)) : 0f;
+
+      if (_wingFlapDetector.Update(feature))
       {
         TryFire(GestureType.WingFlap);
       }
     }
 
-    // 両腕を振る（前後方向、ランニングのように腕を振る動き）
+    // 両腕を振る（前後方向、ランニングのように腕を振る動き）。ピークを迎えた瞬間を1回とする。
     private void DetectArmSwingBoth(float dt)
     {
-      if (!_left.valid || !_right.valid) return;
+      if (!_left.valid || !_right.valid)
+      {
+        _armSwingDetector.Reset();
+        return;
+      }
+
       var lv = Velocity(_left, _prevLeft, dt);
       var rv = Velocity(_right, _prevRight, dt);
-      if (Mathf.Abs(lv.z) > _fastVelocityThreshold && Mathf.Abs(rv.z) > _fastVelocityThreshold)
+      var feature = Mathf.Min(Mathf.Abs(lv.z), Mathf.Abs(rv.z));
+
+      if (_armSwingDetector.Update(feature))
       {
         TryFire(GestureType.ArmSwingBoth);
       }
     }
 
-    // 腕を振り下ろす（ハンマー打ち）：振り上げていた（画面上部にあった）手が急速に下降
+    // 腕を振り下ろす（ハンマー打ち）：振り上げていた（画面上部にあった）手が急速に下降し、
+    // 下降速度がピークを迎えた瞬間を1回とする。
     private void DetectHammerSwingDown(float dt)
     {
-      EvaluateHammer(_right, _prevRight, dt);
-      EvaluateHammer(_left, _prevLeft, dt);
+      EvaluateHammer(_right, _prevRight, dt, _rightHammerDetector);
+      EvaluateHammer(_left, _prevLeft, dt, _leftHammerDetector);
     }
 
-    private void EvaluateHammer(in HandFrame hand, in HandFrame prev, float dt)
+    private void EvaluateHammer(in HandFrame hand, in HandFrame prev, float dt, SwingDetector detector)
     {
-      if (!hand.valid || !prev.valid) return;
+      if (!hand.valid || !prev.valid)
+      {
+        detector.Reset();
+        return;
+      }
+
       var vel = Velocity(hand, prev, dt);
-      if (prev.viewportY > _hammerRaisedViewportY && vel.y < -_fastVelocityThreshold)
+      var downwardSpeed = Mathf.Max(-vel.y, 0f);
+      var wasRaised = prev.viewportY > _hammerRaisedViewportY;
+
+      if (detector.Update(downwardSpeed, wasRaised))
       {
         TryFire(GestureType.HammerSwingDown);
       }
     }
 
-    // 両拳を交互に突き出す（パンチ）：左右どちらかの拳が交互に前方へ突き出る。
-    // こちらも速度だけでなく実際の移動距離（GetForwardDisplacement）を要求する。
+    // 両拳を交互に突き出す（パンチ）：拳の形で前方速度がピークを迎えた瞬間を1回とし、
+    // さらに直近の短い時間で実際に大きく前方へ動いたこと（GetForwardDisplacement）も要求する。
     private void DetectAlternatingPunch(float dt)
     {
-      if (Time.time < _altPunchCooldownUntil) return;
+      var rightFired = EvaluatePunch(_right, _prevRight, dt, _rightPunchDetector, _rightPunchTrace);
+      var leftFired = EvaluatePunch(_left, _prevLeft, dt, _leftPunchDetector, _leftPunchTrace);
 
-      var rightPunch = IsFist(_right) && Velocity(_right, _prevRight, dt).z > _punchVelocityThreshold
-        && _rightPunchTrace.GetForwardDisplacement() > _punchMinDistance;
-      var leftPunch = IsFist(_left) && Velocity(_left, _prevLeft, dt).z > _punchVelocityThreshold
-        && _leftPunchTrace.GetForwardDisplacement() > _punchMinDistance;
-
-      float sign = 0f;
-      if (rightPunch) sign = 1f;
-      else if (leftPunch) sign = -1f;
-      if (sign == 0f) return;
-
-      if (TryFire(GestureType.AlternatingPunch))
+      if (rightFired || leftFired)
       {
-        _lastAltPunchHandSign = sign;
-        _altPunchCooldownUntil = Time.time + _defaultCooldown;
-        _rightPunchTrace.Clear();
-        _leftPunchTrace.Clear();
+        TryFire(GestureType.AlternatingPunch);
       }
     }
 
-    // 胸の前でぐるぐるバルブを回す：片手が胸の高さで速く円運動（水平面の速度が大きい）
+    private bool EvaluatePunch(in HandFrame hand, in HandFrame prev, float dt, SwingDetector detector, WristTrace trace)
+    {
+      if (!hand.valid || !prev.valid)
+      {
+        detector.Reset();
+        return false;
+      }
+
+      var vel = Velocity(hand, prev, dt);
+      var forwardSpeed = Mathf.Max(vel.z, 0f);
+
+      if (!detector.Update(forwardSpeed, IsFist(hand))) return false;
+
+      var displacementOk = trace.GetForwardDisplacement() > _punchMinDistance;
+      trace.Clear();
+      return displacementOk;
+    }
+
+    // 胸の前でぐるぐるバルブを回す：胸の高さで実際に回転した角度を積算し、一定角度ごとに繰り返し発火する。
     private void DetectValveSpin(float dt)
     {
-      EvaluateValve(_right, _prevRight, dt);
-      EvaluateValve(_left, _prevLeft, dt);
+      EvaluateValve(_right, _prevRight, dt, _rightValveTracker);
+      EvaluateValve(_left, _prevLeft, dt, _leftValveTracker);
     }
 
-    private void EvaluateValve(in HandFrame hand, in HandFrame prev, float dt)
+    private void EvaluateValve(in HandFrame hand, in HandFrame prev, float dt, RotationTracker tracker)
     {
-      if (!hand.valid || !prev.valid) return;
-      if (hand.viewportY < _chestViewportYMin || hand.viewportY > _chestViewportYMax) return; // 胸の高さ付近のみ
-      var vel = Velocity(hand, prev, dt);
-      var horizontalSpeed = new Vector2(vel.x, vel.y).magnitude;
-      if (horizontalSpeed > _fastVelocityThreshold)
+      if (!hand.valid || !prev.valid || hand.viewportY < _chestViewportYMin || hand.viewportY > _chestViewportYMax)
       {
-        TryFire(GestureType.ValveSpin);
+        tracker.Reset();
+        return;
+      }
+
+      var vel = Velocity(hand, prev, dt);
+      if (tracker.Update(new Vector2(vel.x, vel.y)))
+      {
+        // 回転量そのものが実際の動作量に比例した自然なレート制限になっているため、
+        // 他ジェスチャー共通のクールダウン（TryFire）は経由せず直接発火する。
+        // 共通クールダウンを通すと、素早く回している時に上限を掛けてしまい「速く回すほど発火が増える」感触を損なう。
+        OnGestureDetected?.Invoke(GestureType.ValveSpin);
       }
     }
 
-    // 両手を前で合わせる：両手首が近接した状態を一定時間保持
+    // 両手を前で合わせる：両手首が近接した状態を一定時間保持。
+    // 保持時間(dwell)＋崩れるまで再発火しない(release)方式で連続発火を防ぐ。
     private void DetectHandsTogether(float dt)
     {
       if (!_left.valid || !_right.valid)
       {
         _handsTogetherTimer = 0f;
+        _handsTogetherArmed = true;
         return;
       }
 
@@ -469,14 +824,15 @@ namespace DemonLordHR.HandTracking
       if (dist < _touchDistanceThreshold * 2f)
       {
         _handsTogetherTimer += dt;
-        if (_handsTogetherTimer >= _handsTogetherHoldSeconds)
+        if (_handsTogetherArmed && _handsTogetherTimer >= _handsTogetherHoldSeconds)
         {
-          if (TryFire(GestureType.HandsTogether)) _handsTogetherTimer = 0f;
+          if (TryFire(GestureType.HandsTogether)) _handsTogetherArmed = false;
         }
       }
       else
       {
         _handsTogetherTimer = 0f;
+        _handsTogetherArmed = true;
       }
     }
   }

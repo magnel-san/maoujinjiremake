@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DemonLordHR.Core;
 using DemonLordHR.UI;
+using TMPro;
 using UnityEngine;
 
 namespace DemonLordHR.Recruitment
@@ -20,6 +21,8 @@ namespace DemonLordHR.Recruitment
     [SerializeField] private GameSettings _settings;
     [SerializeField] private ResumeUIController _resumeUIController;
     [SerializeField] private CircularHoldButton _endInterviewButton;
+    [Tooltip("現在の所持資金を表示するテキスト（未設定でも動作する）")]
+    [SerializeField] private TMP_Text _fundsText;
 
     [Header("入室・整列")]
     [Tooltip("扉の位置（キャラのスポーン地点）")]
@@ -52,6 +55,9 @@ namespace DemonLordHR.Recruitment
     public int CurrentFunds { get; private set; }
     public IReadOnlyList<CharacterData> HiredCharacters => _hiredCharacters;
 
+    /// <summary>採用ジェスチャーを受け付ける前に、残り資金で給料を払えるか確認するために使う。</summary>
+    public bool CanAfford(CharacterData character) => character != null && character.salary <= CurrentFunds;
+
     private readonly List<CharacterData> _hiredCharacters = new List<CharacterData>();
     private readonly List<CharacterData> _candidates = new List<CharacterData>();
     private readonly HashSet<CharacterData> _decided = new HashSet<CharacterData>();
@@ -62,6 +68,12 @@ namespace DemonLordHR.Recruitment
     {
       // 採用試験を実施していない間はボタンを隠しておく。
       if (_endInterviewButton != null) _endInterviewButton.gameObject.SetActive(false);
+      UpdateFundsDisplay();
+    }
+
+    private void UpdateFundsDisplay()
+    {
+      if (_fundsText != null) _fundsText.text = $"資金: {CurrentFunds}";
     }
 
     private void OnEnable()
@@ -112,6 +124,7 @@ namespace DemonLordHR.Recruitment
       yield return new WaitForSeconds(_settings != null ? _settings.genreStartDisplaySeconds : 3f);
 
       CurrentFunds += _settings != null ? _settings.recruitmentPhaseFunds : 100;
+      UpdateFundsDisplay();
 
       _candidates.AddRange(PickCandidates(genre, 3));
 
@@ -231,6 +244,7 @@ namespace DemonLordHR.Recruitment
       _decided.Add(character);
       _hiredCharacters.Add(character);
       CurrentFunds -= character.salary;
+      UpdateFundsDisplay();
       HideResumeTrigger(character);
       OnCharacterHired?.Invoke(character);
     }
