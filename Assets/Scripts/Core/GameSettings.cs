@@ -40,18 +40,14 @@ namespace DemonLordHR.Core
     public float resumeDecisionHoldSeconds = 2f;
     [Tooltip("採用スタンプを押した後、履歴書を表示したままにする秒数（この後、自動的に閉じて次の候補へ）")]
     public float hireStampDisplaySeconds = 1.5f;
-    [Tooltip("採用時のキャラハイライト色")]
-    public Color hireHighlightColor = new Color(1f, 0.85f, 0.2f);
-    [Tooltip("不採用時のキャラハイライト色")]
-    public Color rejectHighlightColor = new Color(0.6f, 0.1f, 0.1f);
     [Tooltip("不採用キャラの吹き飛び威力（共通デフォルト）")]
     public float rejectKnockbackForce = 8f;
     [Tooltip("不採用キャラの吹き飛び方向（ローカル、共通デフォルト）")]
     public Vector3 rejectKnockbackDirection = new Vector3(0f, 0.3f, -1f);
     [Tooltip("採用キャラの整列開始座標")]
     public Vector3 hiredLineupOrigin = Vector3.zero;
-    [Tooltip("採用キャラが並ぶ方向（正規化して使用）")]
-    public Vector3 hiredLineupDirection = Vector3.right;
+    [Tooltip("採用キャラが並ぶ軸・向き")]
+    public LineupAxis hiredLineupAxis = LineupAxis.PositiveX;
     [Tooltip("採用キャラの整列間隔")]
     public float hiredLineupSpacing = 2f;
     [Tooltip("採用キャラが整列位置まで移動する演出の所要時間")]
@@ -108,5 +104,33 @@ namespace DemonLordHR.Core
     Intelligence,
     ColdResist,
     HeatResist,
+  }
+
+  /// <summary>採用キャラの整列方向。ワールド座標軸のどちらへ並べるかを選ぶ。</summary>
+  public enum LineupAxis
+  {
+    PositiveX,
+    NegativeX,
+    PositiveY,
+    NegativeY,
+    PositiveZ,
+    NegativeZ,
+  }
+
+  public static class LineupAxisExtensions
+  {
+    public static Vector3 ToDirection(this LineupAxis axis)
+    {
+      switch (axis)
+      {
+        case LineupAxis.PositiveX: return Vector3.right;
+        case LineupAxis.NegativeX: return Vector3.left;
+        case LineupAxis.PositiveY: return Vector3.up;
+        case LineupAxis.NegativeY: return Vector3.down;
+        case LineupAxis.PositiveZ: return Vector3.forward;
+        case LineupAxis.NegativeZ: return Vector3.back;
+        default: return Vector3.right;
+      }
+    }
   }
 }

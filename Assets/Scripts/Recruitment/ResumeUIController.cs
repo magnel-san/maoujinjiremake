@@ -21,7 +21,7 @@ namespace DemonLordHR.Recruitment
   /// 採用/不採用の決定は「ポインター保持ボタン」で行う（ジェスチャーだけに頼ると、
   /// 誤検出・無反応が起きやすく、取り消しの効かない重要な決定には不向きなため）。
   /// ボタンでの決定はあくまで「意思決定」で、その後に続くジェスチャー
-  /// （ハンコを押す＝右手を振る／殴る＝右手を突き出す）は「確定の演出」という役割分担にしている。
+  /// （ハンコを押す＝右手を上から下に振り下ろす／殴る＝右手を前に突き出す）は「確定の演出」という役割分担にしている。
   /// ポインターと確定ジェスチャーが両方とも右手を使うため、ボタンを指し続けながら腕を振ることは
   /// 物理的にできない。そのため「ボタン保持完了 → プロンプト表示 → ここで初めてジェスチャー待ち」という
   /// 時間差のある2段階フローにし、ボタンから手を離してから腕を振れるようにしている。
@@ -148,6 +148,7 @@ namespace DemonLordHR.Recruitment
 
       _isOpen = false;
       _resumeImageRoot?.SetActive(false);
+      _stampImageRoot?.SetActive(false);
       _stampPromptUI?.SetActive(false);
       _punchPromptUI?.SetActive(false);
       ShowDecisionButtons(false);
@@ -224,12 +225,18 @@ namespace DemonLordHR.Recruitment
           if (_decision == ResumeDecision.None) TurnPage();
           break;
 
-        case GestureType.RightFistPunchOut:
+        // ハンコを押す＝上から下へ振り下ろす動作なので、労働ミニゲームのハンマー打ちと同じ
+        // HammerSwingDown（振り上げていた手が急速に下降）を流用する。
+        case GestureType.HammerSwingDown:
           if (_decision == ResumeDecision.Hired)
           {
             ConfirmStamp();
           }
-          else if (_decision == ResumeDecision.Rejected)
+          break;
+
+        // 殴る＝前方への突き出しはそのままRightFistPunchOutを使う。
+        case GestureType.RightFistPunchOut:
+          if (_decision == ResumeDecision.Rejected)
           {
             ConfirmPunch();
           }

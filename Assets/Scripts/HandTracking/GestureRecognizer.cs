@@ -58,6 +58,15 @@ namespace DemonLordHR.HandTracking
     [Tooltip("腕クロスと判定するまでの保持秒数（誤検出防止）")]
     [SerializeField] private float _armsCrossHoldSeconds = 0.25f;
 
+    [Header("パンチ（右手突き出し／両拳交互）")]
+    [Tooltip("パンチとみなす最小速度（m/s）。数値を上げるほど、より素早く振らないと発火しなくなる。")]
+    [SerializeField] private float _punchVelocityThreshold = 2.2f;
+    [Tooltip("パンチとみなす、直近の短い時間内での最小移動距離（m）。" +
+      "速度だけでなく実際に大きく腕を動かしたことも要求することで、小さな手先の動きでの誤発火を防ぐ。")]
+    [SerializeField] private float _punchMinDistance = 0.18f;
+    [Tooltip("パンチの移動距離を測る時間窓（秒）")]
+    [SerializeField] private float _punchWindowSeconds = 0.25f;
+
     public event Action<GestureType> OnGestureDetected;
 
     private readonly Dictionary<GestureType, float> _cooldownUntil = new Dictionary<GestureType, float>();
@@ -78,6 +87,35 @@ namespace DemonLordHR.HandTracking
     private bool _armsCrossArmed = true;
 
     private bool _overheadArmed = true;
+
+    private readonly WristTrace _rightPunchTrace = new WristTrace();
+    private readonly WristTrace _leftPunchTrace = new WristTrace();
+
+    /// <summary>直近の短い時間窓での手首位置を記録し、実際にどれだけ大きく動いたか(Z方向の変位)を求める。
+    /// 瞬間速度だけで判定すると、小さな手先の動きでも一瞬だけ速度が出て誤発火するため、
+    /// 「大きく振る/突き出す」動作を要求するパンチ系の判定にはこちらを使う。</summary>
+    private class WristTrace
+    {
+      private readonly List<(Vector3 pos, float time)> _points = new List<(Vector3, float)>();
+
+      public void Add(Vector3 pos, float time, float windowSeconds)
+      {
+        _points.Add((pos, time));
+        while (_points.Count > 1 && time - _points[0].time > windowSeconds)
+        {
+          _points.RemoveAt(0);
+        }
+      }
+
+      public void Clear() => _points.Clear();
+
+      /// <summary>時間窓内での最初の点から最新の点までのZ方向の変位（前方への突き出し量）。</summary>
+      public float GetForwardDisplacement()
+      {
+        if (_points.Count < 2) return 0f;
+        return _points[_points.Count - 1].pos.z - _points[0].pos.z;
+      }
+    }
 
     private struct HandFrame
     {
@@ -146,6 +184,9 @@ namespace DemonLordHR.HandTracking
 
       _left = newLeft.valid ? newLeft : HandFrame.Empty;
       _right = newRight.valid ? newRight : HandFrame.Empty;
+
+      if (_left.valid) _leftPunchTrace.Add(_left.wrist, Time.time, _punchWindowSeconds); else _leftPunchTrace.Clear();
+      if (_right.valid) _rightPunchTrace.Add(_right.wrist, Time.time, _punchWindowSeconds); else _rightPunchTrace.Clear();
 
       Evaluate();
     }
@@ -275,12 +316,16 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    // 右手をグーで思いっきり突き出す
+    // 右手をグーで思いっきり突き出す。速度だけでなく、直近の短い時間で実際に大きく
+    // 前方へ動いたこと（GetForwardDisplacement）も要求し、小さな手先の動きでの誤発火を防ぐ。
     private void DetectRightFistPunchOut(float dt)
     {
       if (!IsFist(_right)) return;
       var vel = Velocity(_right, _prevRight, dt);
-      if (vel.z > _fastVelocityThreshold) TryFire(GestureType.RightFistPunchOut);
+      if (vel.z > _punchVelocityThreshold && _rightPunchTrace.GetForwardDisplacement() > _punchMinDistance)
+      {
+        if (TryFire(GestureType.RightFistPunchOut)) _rightPunchTrace.Clear();
+      }
     }
 
     // 胸の前で腕をクロス（左右の手首が体の中心線をまたいで入れ替わる）。
@@ -378,13 +423,16 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    // 両拳を交互に突き出す（パンチ）：左右どちらかの拳が交互に前方へ突き出る
+    // 両拳を交互に突き出す（パンチ）：左右どちらかの拳が交互に前方へ突き出る。
+    // こちらも速度だけでなく実際の移動距離（GetForwardDisplacement）を要求する。
     private void DetectAlternatingPunch(float dt)
     {
       if (Time.time < _altPunchCooldownUntil) return;
 
-      var rightPunch = IsFist(_right) && Velocity(_right, _prevRight, dt).z > _fastVelocityThreshold;
-      var leftPunch = IsFist(_left) && Velocity(_left, _prevLeft, dt).z > _fastVelocityThreshold;
+      var rightPunch = IsFist(_right) && Velocity(_right, _prevRight, dt).z > _punchVelocityThreshold
+        && _rightPunchTrace.GetForwardDisplacement() > _punchMinDistance;
+      var leftPunch = IsFist(_left) && Velocity(_left, _prevLeft, dt).z > _punchVelocityThreshold
+        && _leftPunchTrace.GetForwardDisplacement() > _punchMinDistance;
 
       float sign = 0f;
       if (rightPunch) sign = 1f;
@@ -395,6 +443,8 @@ namespace DemonLordHR.HandTracking
       {
         _lastAltPunchHandSign = sign;
         _altPunchCooldownUntil = Time.time + _defaultCooldown;
+        _rightPunchTrace.Clear();
+        _leftPunchTrace.Clear();
       }
     }
 

@@ -11,8 +11,9 @@ namespace DemonLordHR.Recruitment
   /// <summary>
   /// 採用試験フェーズ（仕様書3章）のロジック全体を統括する。
   /// 1ジャンルにつき3体の候補キャラを登場させ、履歴書閲覧→採用/不採用の決定→
-  /// 終了演出までを進行する。整列移動・吹き飛び・ハイライトは実装済みだが、
-  /// 本物のキャラモデル・履歴書アセットが揃うまでは簡易的な見た目（色ティント等）で代用している。
+  /// 終了演出までを進行する。整列移動・吹き飛びは実装済み。
+  /// 採用はスタンプ確定時、不採用はパンチ確定時に即座に演出を再生し、
+  /// 「面接終了する」による自動不採用（ジェスチャー確定を経ない）だけジャンル終了時にまとめて処理する。
   /// </summary>
   public class RecruitmentPhaseController : MonoBehaviour
   {
@@ -223,7 +224,7 @@ namespace DemonLordHR.Recruitment
       _decided.Add(character);
       _hiredCharacters.Add(character);
       CurrentFunds -= character.salary;
-      HideResumeAndHighlight(character, _settings != null ? _settings.hireHighlightColor : Color.yellow);
+      HideResumeTrigger(character);
       OnCharacterHired?.Invoke(character);
     }
 
@@ -231,7 +232,7 @@ namespace DemonLordHR.Recruitment
     {
       if (_decided.Contains(character)) return;
       _decided.Add(character);
-      HideResumeAndHighlight(character, _settings != null ? _settings.rejectHighlightColor : Color.red);
+      HideResumeTrigger(character);
       OnCharacterRejected?.Invoke(character);
     }
 
@@ -254,20 +255,12 @@ namespace DemonLordHR.Recruitment
       PlayRejectKnockback(character);
     }
 
-    /// <summary>3.3/3.4: 決定後、履歴書表示を非表示化し、対象キャラをハイライト色でティントする。</summary>
-    private void HideResumeAndHighlight(CharacterData character, Color highlightColor)
+    /// <summary>3.3/3.4: 決定後、履歴書を開くためのトリガー表示を非表示化する。</summary>
+    private void HideResumeTrigger(CharacterData character)
     {
       if (_resumeInstances.TryGetValue(character, out var resumeInstance) && resumeInstance != null)
       {
         resumeInstance.SetActive(false);
-      }
-
-      if (_characterInstances.TryGetValue(character, out var characterInstance) && characterInstance != null)
-      {
-        foreach (var renderer in characterInstance.GetComponentsInChildren<Renderer>())
-        {
-          renderer.material.color = highlightColor;
-        }
       }
     }
 
@@ -277,7 +270,7 @@ namespace DemonLordHR.Recruitment
       if (!_characterInstances.TryGetValue(character, out var instance) || instance == null) return;
 
       var origin = _settings.hiredLineupOrigin;
-      var dir = _settings.hiredLineupDirection.normalized;
+      var dir = _settings.hiredLineupAxis.ToDirection();
       var targetPos = origin + dir * (_settings.hiredLineupSpacing * index);
       StartCoroutine(MoveOverTime(instance.transform, targetPos, _settings.hiredLineupMoveDuration));
     }

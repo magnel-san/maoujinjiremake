@@ -22,14 +22,13 @@ MonoBehaviour:
   recruitmentPhaseFunds: 100
   resumeViewHoldSeconds: 3
   resumeBackHoldSeconds: 3
-  hireHighlightColor: {r: 1, g: 0.85, b: 0.2, a: 1}
-  rejectHighlightColor: {r: 0.6, g: 0.1, b: 0.1, a: 1}
-  resumeCrumpleSteps: 4
+  resumeDecisionHoldSeconds: 2
+  hireStampDisplaySeconds: 1.5
   rejectKnockbackForce: 8
   rejectKnockbackDirection: {x: 0, y: 0.3, z: -1}
-  hiredLineupOrigin: {x: 0, y: 0, z: 0}
-  hiredLineupDirection: {x: 1, y: 0, z: 0}
-  hiredLineupSpacing: 2
+  hiredLineupOrigin: {x: 45, y: 0, z: 35}
+  hiredLineupAxis: 5
+  hiredLineupSpacing: 10
   hiredLineupMoveDuration: 1.5
   rejectKnockbackDuration: 0.6
   characterEntryDuration: 4
