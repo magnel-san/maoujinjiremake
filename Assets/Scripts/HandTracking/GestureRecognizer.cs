@@ -18,6 +18,11 @@ namespace DemonLordHR.HandTracking
   /// 座標変換は<see cref="HandTrackingController.ConvertToUnityVector"/>を必ず経由する。
   /// 手モデルのボーン回転計算と同じ変換を通さないと、ミラー設定（Z軸反転等）が
   /// 手モデルとジェスチャー判定で食い違ってしまう。
+  ///
+  /// 「ポーズが成立している間」を条件にする判定（輪っか・腕クロス・頭上等）は、
+  /// 単にその回だけ判定して発火すると、ポーズを保持している間ずっと（クールダウンのたびに）
+  /// 発火し続けてしまう。これを防ぐため、一定時間の保持(dwell)を要求し、かつ一度発火したら
+  /// ポーズが崩れる(release)まで再発火しないエッジトリガー方式にしている。
   /// </summary>
   public class GestureRecognizer : MonoBehaviour
   {
@@ -30,7 +35,7 @@ namespace DemonLordHR.HandTracking
     [SerializeField] private float _fistDistanceThreshold = 0.09f;
     [Tooltip("速い動きとみなす速度のしきい値（m/s）")]
     [SerializeField] private float _fastVelocityThreshold = 1.2f;
-    [Tooltip("近接（輪っか・タッチ等）とみなす距離のしきい値（m）")]
+    [Tooltip("近接（タッチ等）とみなす距離のしきい値（m）")]
     [SerializeField] private float _touchDistanceThreshold = 0.04f;
     [Tooltip("頭上とみなす、カメラ画面内での高さ（0=下端 1=上端）。画面上部にあれば頭上とみなす。")]
     [SerializeField, Range(0f, 1f)] private float _overheadViewportY = 0.75f;
@@ -41,6 +46,17 @@ namespace DemonLordHR.HandTracking
     [SerializeField, Range(0f, 1f)] private float _hammerRaisedViewportY = 0.55f;
     [Tooltip("HandsTogether判定に必要な保持秒数")]
     [SerializeField] private float _handsTogetherHoldSeconds = 0.3f;
+
+    [Header("輪っかポーズ（履歴書のページ送り）")]
+    [Tooltip("輪っかポーズとみなす、画面内での親指先端⇔人差し指先端の距離（0〜1の正規化座標）。" +
+      "カメラ画面上での見た目の距離で判定するため、輪をカメラに向けて（眼鏡をかけるように）構えた時に反応する。")]
+    [SerializeField] private float _hoopScreenDistanceThreshold = 0.06f;
+    [Tooltip("輪っかポーズを保持する必要がある秒数（誤検出防止）")]
+    [SerializeField] private float _hoopHoldSeconds = 0.25f;
+
+    [Header("腕クロス（不採用の意思表示）")]
+    [Tooltip("腕クロスと判定するまでの保持秒数（誤検出防止）")]
+    [SerializeField] private float _armsCrossHoldSeconds = 0.25f;
 
     public event Action<GestureType> OnGestureDetected;
 
@@ -55,6 +71,14 @@ namespace DemonLordHR.HandTracking
     private float _lastAltPunchHandSign;
     private float _altPunchCooldownUntil;
 
+    private float _hoopHoldTimer;
+    private bool _hoopArmed = true; // ポーズが崩れて初めて次の発火を許可する
+
+    private float _armsCrossHoldTimer;
+    private bool _armsCrossArmed = true;
+
+    private bool _overheadArmed = true;
+
     private struct HandFrame
     {
       public bool valid;
@@ -63,6 +87,11 @@ namespace DemonLordHR.HandTracking
       /// <summary>カメラ画面内での手首の高さ（0=下端 1=上端）。頭上/胸の高さ等、絶対的な高さの判定に使う。
       /// ワールドランドマークは手自体を原点とする相対座標のため、絶対的な高さの判定には使えない。</summary>
       public float viewportY;
+      /// <summary>カメラ画面内での親指先端・人差し指先端の位置（0〜1正規化座標、Y-up）。
+      /// 輪っかポーズはカメラに向けて構えた時だけ画面上で重なって見えるべきなので、
+      /// ワールド座標の3D距離ではなくこの2D位置で判定する。</summary>
+      public Vector2 thumbTipScreen;
+      public Vector2 indexTipScreen;
       public float timestamp;
 
       public static HandFrame Empty => new HandFrame { valid = false, fingerTips = new Vector3[5] };
@@ -105,14 +134,13 @@ namespace DemonLordHR.HandTracking
       {
         var isRight = IsRightHand(result, i);
 
-        NormalizedLandmark? normalizedWrist = null;
-        if (result.handLandmarks != null && i < result.handLandmarks.Count &&
-            result.handLandmarks[i].landmarks != null && result.handLandmarks[i].landmarks.Count > 0)
+        List<NormalizedLandmark> normalizedLandmarks = null;
+        if (result.handLandmarks != null && i < result.handLandmarks.Count)
         {
-          normalizedWrist = result.handLandmarks[i].landmarks[0];
+          normalizedLandmarks = result.handLandmarks[i].landmarks;
         }
 
-        var frame = BuildFrame(result.handWorldLandmarks[i], normalizedWrist);
+        var frame = BuildFrame(result.handWorldLandmarks[i], normalizedLandmarks);
         if (isRight) newRight = frame; else newLeft = frame;
       }
 
@@ -133,7 +161,7 @@ namespace DemonLordHR.HandTracking
       return classifications.categories[0].categoryName == "Left";
     }
 
-    private HandFrame BuildFrame(Landmarks worldLandmarks, NormalizedLandmark? normalizedWrist)
+    private HandFrame BuildFrame(Landmarks worldLandmarks, List<NormalizedLandmark> normalizedLandmarks)
     {
       if (worldLandmarks.landmarks == null || worldLandmarks.landmarks.Count < 21) return HandFrame.Empty;
       if (_handTrackingController == null) return HandFrame.Empty;
@@ -141,24 +169,33 @@ namespace DemonLordHR.HandTracking
       var lm = worldLandmarks.landmarks;
       Vector3 V(int i) => _handTrackingController.ConvertToUnityVector(new Vector3(lm[i].x, lm[i].y, lm[i].z));
 
-      return new HandFrame
+      var frame = new HandFrame
       {
         valid = true,
         wrist = V(0),
         fingerTips = new[] { V(4), V(8), V(12), V(16), V(20) },
-        viewportY = normalizedWrist.HasValue ? 1f - normalizedWrist.Value.y : 0.5f,
+        viewportY = 0.5f,
         timestamp = Time.time,
       };
+
+      if (normalizedLandmarks != null && normalizedLandmarks.Count > 8)
+      {
+        frame.viewportY = 1f - normalizedLandmarks[0].y;
+        frame.thumbTipScreen = new Vector2(normalizedLandmarks[4].x, 1f - normalizedLandmarks[4].y);
+        frame.indexTipScreen = new Vector2(normalizedLandmarks[8].x, 1f - normalizedLandmarks[8].y);
+      }
+
+      return frame;
     }
 
     private void Evaluate()
     {
       var dt = Mathf.Max(Time.deltaTime, 0.0001f);
 
-      DetectHoopBothHands();
+      DetectHoopBothHands(dt);
       DetectBigCircleOverhead();
       DetectRightFistPunchOut(dt);
-      DetectArmsCross();
+      DetectArmsCross(dt);
       DetectClapNarrow(dt);
       DetectHorizontalSwipes(dt);
       DetectWingFlap(dt);
@@ -185,21 +222,57 @@ namespace DemonLordHR.HandTracking
       return (current.wrist - previous.wrist) / dt;
     }
 
-    // 両手で親指と人差し指で輪をつくる
-    private void DetectHoopBothHands()
+    // 両手で親指と人差し指で輪をつくり、カメラに向ける（眼鏡をかけるような構え）。
+    // 画面上の見た目の距離で判定するため、輪をカメラに向けた時だけ反応する。
+    // 保持時間(dwell)＋崩れるまで再発火しない(release)方式で、1回のポーズにつき1回だけ発火する。
+    private void DetectHoopBothHands(float dt)
     {
-      if (!_left.valid || !_right.valid) return;
-      var leftHoop = Vector3.Distance(_left.fingerTips[0], _left.fingerTips[1]) < _touchDistanceThreshold;
-      var rightHoop = Vector3.Distance(_right.fingerTips[0], _right.fingerTips[1]) < _touchDistanceThreshold;
-      if (leftHoop && rightHoop) TryFire(GestureType.HoopBothHands);
+      if (!_left.valid || !_right.valid)
+      {
+        _hoopHoldTimer = 0f;
+        _hoopArmed = true;
+        return;
+      }
+
+      var leftHoop = Vector2.Distance(_left.thumbTipScreen, _left.indexTipScreen) < _hoopScreenDistanceThreshold;
+      var rightHoop = Vector2.Distance(_right.thumbTipScreen, _right.indexTipScreen) < _hoopScreenDistanceThreshold;
+
+      if (!leftHoop || !rightHoop)
+      {
+        _hoopHoldTimer = 0f;
+        _hoopArmed = true; // ポーズが崩れたので次のポーズで再度発火できるようにする
+        return;
+      }
+
+      _hoopHoldTimer += dt;
+      if (_hoopArmed && _hoopHoldTimer >= _hoopHoldSeconds)
+      {
+        if (TryFire(GestureType.HoopBothHands)) _hoopArmed = false;
+      }
     }
 
-    // 頭の上で大きな丸をつくる（片手または両手が頭上（画面上部）で高速に動いていることで近似）
+    // 頭の上で大きな丸をつくる（片手または両手が頭上（画面上部）で高速に動いていることで近似）。
+    // 頭上から下りる(release)まで再発火しないようにし、頭上に留まっている間の連続発火を防ぐ。
     private void DetectBigCircleOverhead()
     {
-      var leftOverheadFast = _left.valid && _left.viewportY > _overheadViewportY && Velocity(_left, _prevLeft, Time.deltaTime).magnitude > _fastVelocityThreshold;
-      var rightOverheadFast = _right.valid && _right.viewportY > _overheadViewportY && Velocity(_right, _prevRight, Time.deltaTime).magnitude > _fastVelocityThreshold;
-      if (leftOverheadFast || rightOverheadFast) TryFire(GestureType.BigCircleOverhead);
+      var leftOverhead = _left.valid && _left.viewportY > _overheadViewportY;
+      var rightOverhead = _right.valid && _right.viewportY > _overheadViewportY;
+
+      if (!leftOverhead && !rightOverhead)
+      {
+        _overheadArmed = true;
+        return;
+      }
+
+      if (!_overheadArmed) return;
+
+      var leftFast = leftOverhead && Velocity(_left, _prevLeft, Time.deltaTime).magnitude > _fastVelocityThreshold;
+      var rightFast = rightOverhead && Velocity(_right, _prevRight, Time.deltaTime).magnitude > _fastVelocityThreshold;
+
+      if (leftFast || rightFast)
+      {
+        if (TryFire(GestureType.BigCircleOverhead)) _overheadArmed = false;
+      }
     }
 
     // 右手をグーで思いっきり突き出す
@@ -210,11 +283,30 @@ namespace DemonLordHR.HandTracking
       if (vel.z > _fastVelocityThreshold) TryFire(GestureType.RightFistPunchOut);
     }
 
-    // 胸の前で腕をクロス（左右の手首が体の中心線をまたいで入れ替わる）
-    private void DetectArmsCross()
+    // 胸の前で腕をクロス（左右の手首が体の中心線をまたいで入れ替わる）。
+    // 保持時間(dwell)＋崩れるまで再発火しない(release)方式で誤検出・連続発火を防ぐ。
+    private void DetectArmsCross(float dt)
     {
-      if (!_left.valid || !_right.valid) return;
-      if (_left.wrist.x > _right.wrist.x + 0.02f) TryFire(GestureType.ArmsCross);
+      if (!_left.valid || !_right.valid)
+      {
+        _armsCrossHoldTimer = 0f;
+        _armsCrossArmed = true;
+        return;
+      }
+
+      var crossed = _left.wrist.x > _right.wrist.x + 0.02f;
+      if (!crossed)
+      {
+        _armsCrossHoldTimer = 0f;
+        _armsCrossArmed = true;
+        return;
+      }
+
+      _armsCrossHoldTimer += dt;
+      if (_armsCrossArmed && _armsCrossHoldTimer >= _armsCrossHoldSeconds)
+      {
+        if (TryFire(GestureType.ArmsCross)) _armsCrossArmed = false;
+      }
     }
 
     // 拍手のように両手を胸の前で近づけ離す（一定距離まで急接近した瞬間を1回とする）
