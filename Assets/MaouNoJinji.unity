@@ -238,7 +238,7 @@ GameObject:
   - component: {fileID: 85071186}
   - component: {fileID: 85071189}
   - component: {fileID: 85071188}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: TitleStartButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -498,7 +498,7 @@ GameObject:
   - component: {fileID: 252021101}
   - component: {fileID: 252021104}
   - component: {fileID: 252021103}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: RuleReadyButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -611,7 +611,7 @@ GameObject:
   - component: {fileID: 280857358}
   - component: {fileID: 280857357}
   - component: {fileID: 280857356}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: ResumeImage
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -665,15 +665,15 @@ RectTransform:
   m_GameObject: {fileID: 280857355}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.45, y: 0.45, z: 0.45}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1270931058}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 1545, y: 2000}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &337351676
 GameObject:
@@ -782,7 +782,7 @@ GameObject:
   - component: {fileID: 373459854}
   - component: {fileID: 373459856}
   - component: {fileID: 373459855}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1048,7 +1048,7 @@ GameObject:
   - component: {fileID: 604577057}
   - component: {fileID: 604577059}
   - component: {fileID: 604577058}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1185,7 +1185,7 @@ GameObject:
   - component: {fileID: 681877490}
   - component: {fileID: 681877492}
   - component: {fileID: 681877491}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: HandTracking
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1414,6 +1414,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1317193720}
+  - {fileID: 1825533929}
   m_Father: {fileID: 837406136}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &717844465
@@ -1595,7 +1596,7 @@ GameObject:
   - component: {fileID: 970662946}
   - component: {fileID: 970662948}
   - component: {fileID: 970662947}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: 'Text (TMP) '
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1780,7 +1781,7 @@ GameObject:
   - component: {fileID: 1151516045}
   - component: {fileID: 1151516047}
   - component: {fileID: 1151516046}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2010,7 +2011,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1270931058}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: ResumeImageRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2050,7 +2051,7 @@ GameObject:
   - component: {fileID: 1298296685}
   - component: {fileID: 1298296688}
   - component: {fileID: 1298296687}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: EndingEndButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2202,7 +2203,8 @@ MonoBehaviour:
   m_RequiresDepthTextureOption: 2
   m_RequiresOpaqueTextureOption: 2
   m_CameraType: 0
-  m_Cameras: []
+  m_Cameras:
+  - {fileID: 1825533926}
   m_RendererIndex: -1
   m_VolumeLayerMask:
     serializedVersion: 2
@@ -2277,7 +2279,7 @@ Camera:
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 55
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -2312,7 +2314,7 @@ GameObject:
   - component: {fileID: 1388123016}
   - component: {fileID: 1388123020}
   - component: {fileID: 1388123019}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: MinigameReadyButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2427,7 +2429,7 @@ GameObject:
   - component: {fileID: 1396309582}
   - component: {fileID: 1396309584}
   - component: {fileID: 1396309583}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: CloseResumeButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2636,7 +2638,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1474262217}
   - component: {fileID: 1474262218}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: PointerController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2725,7 +2727,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1540701103}
   - component: {fileID: 1540701104}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: UI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2826,7 +2828,7 @@ GameObject:
   - component: {fileID: 1681990305}
   - component: {fileID: 1681990307}
   - component: {fileID: 1681990306}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2963,7 +2965,7 @@ GameObject:
   - component: {fileID: 1762296362}
   - component: {fileID: 1762296364}
   - component: {fileID: 1762296363}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3089,6 +3091,134 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1762296361}
   m_CullTransparentMesh: 1
+--- !u!1 &1825533925
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1825533929}
+  - component: {fileID: 1825533926}
+  - component: {fileID: 1825533927}
+  m_Layer: 0
+  m_Name: WorldUICamera
+  m_TagString: MainCamera
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!20 &1825533926
+Camera:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1825533925}
+  m_Enabled: 1
+  serializedVersion: 2
+  m_ClearFlags: 4
+  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_projectionMatrixMode: 1
+  m_GateFitMode: 2
+  m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
+  m_SensorSize: {x: 36, y: 24}
+  m_LensShift: {x: 0, y: 0}
+  m_NormalizedViewPortRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
+  near clip plane: 0.3
+  far clip plane: 1000
+  field of view: 60
+  orthographic: 0
+  orthographic size: 5
+  m_Depth: -1
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 64
+  m_RenderingPath: -1
+  m_TargetTexture: {fileID: 0}
+  m_TargetDisplay: 0
+  m_TargetEye: 3
+  m_HDR: 1
+  m_AllowMSAA: 1
+  m_AllowDynamicResolution: 0
+  m_ForceIntoRT: 0
+  m_OcclusionCulling: 1
+  m_StereoConvergence: 10
+  m_StereoSeparation: 0.022
+--- !u!114 &1825533927
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1825533925}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 1
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
+--- !u!4 &1825533929
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1825533925}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 694815937}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!1 &1883330669
 GameObject:
   m_ObjectHideFlags: 0
@@ -3246,8 +3376,9 @@ MonoBehaviour:
   - {fileID: 150368325}
   - {fileID: 484559894}
   - {fileID: 834805266}
-  _resumePrefab: {fileID: 7129181363434547592, guid: b0e32e62451fdaf47a8fb486d1feffde, type: 3}
+  _resumePrefab: {fileID: 6790205939971347944, guid: d60a7887c83876a45bc63a5dada0c36b, type: 3}
   _resumeLocalOffset: {x: 0, y: 1.2, z: 0.5}
+  _resumeParent: {fileID: 1540701103}
 --- !u!1 &2044658238
 GameObject:
   m_ObjectHideFlags: 0
@@ -3295,7 +3426,7 @@ GameObject:
   - component: {fileID: 2108854716}
   - component: {fileID: 2108854719}
   - component: {fileID: 2108854718}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: EndInterviewButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3408,7 +3539,7 @@ GameObject:
   - component: {fileID: 2136522290}
   - component: {fileID: 2136522289}
   - component: {fileID: 2136522288}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: StampImage
   m_TagString: Untagged
   m_Icon: {fileID: 0}

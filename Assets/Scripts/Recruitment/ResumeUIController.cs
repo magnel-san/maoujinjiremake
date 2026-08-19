@@ -24,6 +24,8 @@ namespace DemonLordHR.Recruitment
   {
     [SerializeField] private GestureRecognizer _gestureRecognizer;
     [SerializeField] private GameSettings _settings;
+    [Tooltip("採用のハンコを押す間、右手を「ハンコ持ち手」モデルに差し替えるために使う")]
+    [SerializeField] private HandTrackingController _handTrackingController;
 
     [Header("2D履歴書（採用/不採用決定前）")]
     [SerializeField] private GameObject _resumeImageRoot;
@@ -111,6 +113,7 @@ namespace DemonLordHR.Recruitment
       _stampImageRoot?.SetActive(false);
       _resumeImageRoot?.SetActive(true);
       if (_backButton != null) _backButton.gameObject.SetActive(true);
+      _handTrackingController?.SetRightHandStampMode(false);
       ApplyPageSprite();
     }
 
@@ -120,6 +123,7 @@ namespace DemonLordHR.Recruitment
       _resumeImageRoot?.SetActive(false);
       _resume3DRoot?.SetActive(false);
       if (_backButton != null) _backButton.gameObject.SetActive(false);
+      _handTrackingController?.SetRightHandStampMode(false);
       _currentCharacter = null;
     }
 
@@ -221,7 +225,7 @@ namespace DemonLordHR.Recruitment
           {
             _decision = ResumeDecision.Hired;
             OnHireIntent?.Invoke(_currentCharacter);
-            // TODO: 魔王の右手を「ハンコ持ち手」モデルに差し替える（右手指トラッキングOFF）。
+            _handTrackingController?.SetRightHandStampMode(true);
             // ハイライトはRecruitmentPhaseController側で行う。
           }
           break;

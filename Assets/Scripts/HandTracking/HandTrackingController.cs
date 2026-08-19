@@ -40,6 +40,13 @@ namespace DemonLordHR.HandTracking
     [Tooltip("右手モデルを生成する親（未指定ならこのTransform配下）")]
     [SerializeField] private Transform _handsParent;
 
+    [Header("ハンコ持ち手（任意）")]
+    [Tooltip("採用のハンコを押す間だけ右手に差し替える「ハンコ持ち手」モデル。既に右手用として作成済みのため、" +
+      "左手のようなミラーリングはしない。このプレハブのHand Bone RigはWrist Rootだけ設定し、" +
+      "指のボーン欄は空のままにしておくこと。空にしておくと指の再生成をスキップし、" +
+      "手首の位置・向きだけ実際のトラッキングに追従しつつ、指は作成時の固定ポーズのままになる。")]
+    [SerializeField] private HandBoneRig _stampHandPrefab;
+
     [Header("MediaPipe設定")]
     [SerializeField] private BaseOptions.Delegate _delegate =
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
@@ -96,8 +103,11 @@ namespace DemonLordHR.HandTracking
     private HandLandmarker _taskApi;
     private HandBoneRig _leftHandInstance;
     private HandBoneRig _rightHandInstance;
+    private HandBoneRig _stampHandInstance;
     private HandRetargetState _leftState;
     private HandRetargetState _rightState;
+    private HandRetargetState _stampState;
+    private bool _isRightHandStampMode;
     private TextureFramePool _textureFramePool;
     private Coroutine _runCoroutine;
 
@@ -121,8 +131,21 @@ namespace DemonLordHR.HandTracking
       {
         _handsVisible = value;
         if (_leftHandInstance != null) _leftHandInstance.gameObject.SetActive(value);
-        if (_rightHandInstance != null) _rightHandInstance.gameObject.SetActive(value);
+        if (_rightHandInstance != null) _rightHandInstance.gameObject.SetActive(value && !_isRightHandStampMode);
+        if (_stampHandInstance != null) _stampHandInstance.gameObject.SetActive(value && _isRightHandStampMode);
       }
+    }
+
+    /// <summary>
+    /// 採用のハンコを押す間、右手を「ハンコ持ち手」モデルに差し替える。
+    /// 手首の位置・向きは通常通りトラッキングに追従し続け、指のボーンだけ更新されなくなる
+    /// （<see cref="_stampHandPrefab"/>の指ボーン欄が空である前提）。
+    /// </summary>
+    public void SetRightHandStampMode(bool enabled)
+    {
+      if (_stampHandInstance == null) return; // プレハブ未設定なら何もしない（通常の右手のまま）
+      _isRightHandStampMode = enabled;
+      HandsVisible = _handsVisible;
     }
 
     private void Awake()
@@ -142,6 +165,15 @@ namespace DemonLordHR.HandTracking
         var s = _rightHandInstance.transform.localScale;
         _rightHandInstance.transform.localScale = new Vector3(-Mathf.Abs(s.x), s.y, s.z);
         _rightState = new HandRetargetState(_rightHandInstance);
+      }
+
+      if (_stampHandPrefab != null)
+      {
+        // 既に右手用として作られているため、ミラーリングはしない。
+        _stampHandInstance = Instantiate(_stampHandPrefab, parent);
+        _stampHandInstance.isRightHand = true;
+        _stampHandInstance.name = "MaouHand_Right_Stamp";
+        _stampState = new HandRetargetState(_stampHandInstance);
       }
 
       HandsVisible = _handsVisible;
@@ -310,8 +342,18 @@ namespace DemonLordHR.HandTracking
           if (isRight) _rightIndexTipViewport = viewport; else _leftIndexTipViewport = viewport;
         }
 
-        var rig = isRight ? _rightHandInstance : _leftHandInstance;
-        var state = isRight ? _rightState : _leftState;
+        HandBoneRig rig;
+        HandRetargetState state;
+        if (isRight && _isRightHandStampMode && _stampHandInstance != null)
+        {
+          rig = _stampHandInstance;
+          state = _stampState;
+        }
+        else
+        {
+          rig = isRight ? _rightHandInstance : _leftHandInstance;
+          state = isRight ? _rightState : _leftState;
+        }
         if (rig == null || state == null || rig.wristRoot == null) continue;
 
         var worldLandmarks = result.handWorldLandmarks[i];
@@ -467,7 +509,7 @@ namespace DemonLordHR.HandTracking
     /// MediaPipeはX:右が正, Y:下が正、Zは値が小さいほどカメラに近い、という規約。
     /// UnityはY-upなのでYはデフォルトで反転する。X/Zは見た目がおかしい場合にインスペクタで切り替える。
     /// </summary>
-    private Vector3 ConvertToUnityVector(Vector3 landmarkVector)
+    public Vector3 ConvertToUnityVector(Vector3 landmarkVector)
     {
       var x = _mirrorX ? -landmarkVector.x : landmarkVector.x;
       var y = _mirrorY ? landmarkVector.y : -landmarkVector.y;

@@ -14,6 +14,10 @@ namespace DemonLordHR.HandTracking
   ///
   /// NOTE: ここでの判定はヒューリスティックな近似実装であり、閾値は全てインスペクタで
   /// 調整可能にしてある。実機での動作確認をしながらチューニングすることを前提とする。
+  ///
+  /// 座標変換は<see cref="HandTrackingController.ConvertToUnityVector"/>を必ず経由する。
+  /// 手モデルのボーン回転計算と同じ変換を通さないと、ミラー設定（Z軸反転等）が
+  /// 手モデルとジェスチャー判定で食い違ってしまう。
   /// </summary>
   public class GestureRecognizer : MonoBehaviour
   {
@@ -28,8 +32,13 @@ namespace DemonLordHR.HandTracking
     [SerializeField] private float _fastVelocityThreshold = 1.2f;
     [Tooltip("近接（輪っか・タッチ等）とみなす距離のしきい値（m）")]
     [SerializeField] private float _touchDistanceThreshold = 0.04f;
-    [Tooltip("頭上とみなす、手首の腰基準高さ（m）")]
-    [SerializeField] private float _overheadHeight = 0.35f;
+    [Tooltip("頭上とみなす、カメラ画面内での高さ（0=下端 1=上端）。画面上部にあれば頭上とみなす。")]
+    [SerializeField, Range(0f, 1f)] private float _overheadViewportY = 0.75f;
+    [Tooltip("胸の高さとみなす、カメラ画面内での高さの範囲（0=下端 1=上端）")]
+    [SerializeField, Range(0f, 1f)] private float _chestViewportYMin = 0.35f;
+    [SerializeField, Range(0f, 1f)] private float _chestViewportYMax = 0.65f;
+    [Tooltip("ハンマーの「振り上げ済み」とみなす、カメラ画面内での高さ（0=下端 1=上端）")]
+    [SerializeField, Range(0f, 1f)] private float _hammerRaisedViewportY = 0.55f;
     [Tooltip("HandsTogether判定に必要な保持秒数")]
     [SerializeField] private float _handsTogetherHoldSeconds = 0.3f;
 
@@ -51,6 +60,9 @@ namespace DemonLordHR.HandTracking
       public bool valid;
       public Vector3 wrist;
       public Vector3[] fingerTips; // Thumb, Index, Middle, Ring, Pinky
+      /// <summary>カメラ画面内での手首の高さ（0=下端 1=上端）。頭上/胸の高さ等、絶対的な高さの判定に使う。
+      /// ワールドランドマークは手自体を原点とする相対座標のため、絶対的な高さの判定には使えない。</summary>
+      public float viewportY;
       public float timestamp;
 
       public static HandFrame Empty => new HandFrame { valid = false, fingerTips = new Vector3[5] };
@@ -92,7 +104,15 @@ namespace DemonLordHR.HandTracking
       for (var i = 0; i < result.handWorldLandmarks.Count; i++)
       {
         var isRight = IsRightHand(result, i);
-        var frame = BuildFrame(result.handWorldLandmarks[i]);
+
+        NormalizedLandmark? normalizedWrist = null;
+        if (result.handLandmarks != null && i < result.handLandmarks.Count &&
+            result.handLandmarks[i].landmarks != null && result.handLandmarks[i].landmarks.Count > 0)
+        {
+          normalizedWrist = result.handLandmarks[i].landmarks[0];
+        }
+
+        var frame = BuildFrame(result.handWorldLandmarks[i], normalizedWrist);
         if (isRight) newRight = frame; else newLeft = frame;
       }
 
@@ -113,18 +133,20 @@ namespace DemonLordHR.HandTracking
       return classifications.categories[0].categoryName == "Left";
     }
 
-    private HandFrame BuildFrame(Landmarks worldLandmarks)
+    private HandFrame BuildFrame(Landmarks worldLandmarks, NormalizedLandmark? normalizedWrist)
     {
       if (worldLandmarks.landmarks == null || worldLandmarks.landmarks.Count < 21) return HandFrame.Empty;
+      if (_handTrackingController == null) return HandFrame.Empty;
 
       var lm = worldLandmarks.landmarks;
-      Vector3 V(int i) => new Vector3(lm[i].x, lm[i].y, lm[i].z);
+      Vector3 V(int i) => _handTrackingController.ConvertToUnityVector(new Vector3(lm[i].x, lm[i].y, lm[i].z));
 
       return new HandFrame
       {
         valid = true,
         wrist = V(0),
         fingerTips = new[] { V(4), V(8), V(12), V(16), V(20) },
+        viewportY = normalizedWrist.HasValue ? 1f - normalizedWrist.Value.y : 0.5f,
         timestamp = Time.time,
       };
     }
@@ -172,12 +194,11 @@ namespace DemonLordHR.HandTracking
       if (leftHoop && rightHoop) TryFire(GestureType.HoopBothHands);
     }
 
-    // 頭の上で大きな丸をつくる（片手または両手が頭上で高速に動いていることで近似）
+    // 頭の上で大きな丸をつくる（片手または両手が頭上（画面上部）で高速に動いていることで近似）
     private void DetectBigCircleOverhead()
     {
-      var overheadY = _overheadHeight;
-      var leftOverheadFast = _left.valid && _left.wrist.y > overheadY && Velocity(_left, _prevLeft, Time.deltaTime).magnitude > _fastVelocityThreshold;
-      var rightOverheadFast = _right.valid && _right.wrist.y > overheadY && Velocity(_right, _prevRight, Time.deltaTime).magnitude > _fastVelocityThreshold;
+      var leftOverheadFast = _left.valid && _left.viewportY > _overheadViewportY && Velocity(_left, _prevLeft, Time.deltaTime).magnitude > _fastVelocityThreshold;
+      var rightOverheadFast = _right.valid && _right.viewportY > _overheadViewportY && Velocity(_right, _prevRight, Time.deltaTime).magnitude > _fastVelocityThreshold;
       if (leftOverheadFast || rightOverheadFast) TryFire(GestureType.BigCircleOverhead);
     }
 
@@ -248,7 +269,7 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    // 腕を振り下ろす（ハンマー打ち）：上方にあった手が急速に下降
+    // 腕を振り下ろす（ハンマー打ち）：振り上げていた（画面上部にあった）手が急速に下降
     private void DetectHammerSwingDown(float dt)
     {
       EvaluateHammer(_right, _prevRight, dt);
@@ -259,7 +280,7 @@ namespace DemonLordHR.HandTracking
     {
       if (!hand.valid || !prev.valid) return;
       var vel = Velocity(hand, prev, dt);
-      if (prev.wrist.y > 0.1f && vel.y < -_fastVelocityThreshold)
+      if (prev.viewportY > _hammerRaisedViewportY && vel.y < -_fastVelocityThreshold)
       {
         TryFire(GestureType.HammerSwingDown);
       }
@@ -295,7 +316,7 @@ namespace DemonLordHR.HandTracking
     private void EvaluateValve(in HandFrame hand, in HandFrame prev, float dt)
     {
       if (!hand.valid || !prev.valid) return;
-      if (hand.wrist.y < -0.1f || hand.wrist.y > 0.3f) return; // 胸の高さ付近のみ
+      if (hand.viewportY < _chestViewportYMin || hand.viewportY > _chestViewportYMax) return; // 胸の高さ付近のみ
       var vel = Velocity(hand, prev, dt);
       var horizontalSpeed = new Vector2(vel.x, vel.y).magnitude;
       if (horizontalSpeed > _fastVelocityThreshold)

@@ -29,10 +29,13 @@ namespace DemonLordHR.Recruitment
     [SerializeField] private List<Vector3>[] _entryWaypoints = new List<Vector3>[3];
 
     [Header("履歴書")]
-    [Tooltip("ResumeOpenTrigger付きの履歴書オブジェクトのプレハブ")]
+    [Tooltip("CircularHoldButton付きの履歴書オブジェクトのプレハブ（ゲージ画像もここで設定する）")]
     [SerializeField] private GameObject _resumePrefab;
     [Tooltip("履歴書オブジェクトを、キャラの位置からどれだけずらして配置するか")]
     [SerializeField] private Vector3 _resumeLocalOffset = new Vector3(0f, 1.2f, 0.5f);
+    [Tooltip("生成した履歴書オブジェクトの親（「UI」CanvasのTransform等）。" +
+      "祖先にCanvasが無いとUI(Image)が描画されないため、Canvasの子として生成する。")]
+    [SerializeField] private Transform _resumeParent;
 
     private readonly Dictionary<CharacterData, GameObject> _characterInstances = new Dictionary<CharacterData, GameObject>();
     private readonly Dictionary<CharacterData, GameObject> _resumeInstances = new Dictionary<CharacterData, GameObject>();
@@ -183,10 +186,17 @@ namespace DemonLordHR.Recruitment
     {
       if (_resumePrefab == null) return;
 
-      var resumeInstance = Instantiate(_resumePrefab, characterInstance.transform.position + _resumeLocalOffset, Quaternion.identity);
-      var trigger = resumeInstance.GetComponent<ResumeOpenTrigger>();
-      if (trigger == null) trigger = resumeInstance.AddComponent<ResumeOpenTrigger>();
-      trigger.Initialize(this, character, _settings != null ? _settings.resumeViewHoldSeconds : 3f);
+      // 回転はワールド基準ではなく、親（UI Canvas）と同じ向きに合わせる。
+      // Quaternion.identity固定だとCanvasの回転（Y180°等）と噛み合わず、文字が裏返って見える。
+      var rotation = _resumeParent != null ? _resumeParent.rotation : Quaternion.identity;
+      var resumeInstance = Instantiate(_resumePrefab, characterInstance.transform.position + _resumeLocalOffset, rotation, _resumeParent);
+
+      var button = resumeInstance.GetComponent<CircularHoldButton>();
+      if (button != null)
+      {
+        button.HoldSeconds = _settings != null ? _settings.resumeViewHoldSeconds : 3f;
+        button.OnTriggered += () => RequestOpenResume(character);
+      }
 
       _resumeInstances[character] = resumeInstance;
     }

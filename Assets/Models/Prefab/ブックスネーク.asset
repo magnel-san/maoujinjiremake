@@ -17,5 +17,7 @@ MonoBehaviour:
   characterPrefab: {fileID: 3458750724658694515, guid: e3600b7eb3c699c449d8e0936e77645f, type: 3}
   salary: 0
   attackPower: 0
-  resumePages: []
+  resumePages:
+  - {fileID: 21300000, guid: 35804f1c11043564286b7db6cc76b289, type: 3}
+  - {fileID: 21300000, guid: bf05b527b081c874f81222dfbec00553, type: 3}
   aiPromptFragment: 
