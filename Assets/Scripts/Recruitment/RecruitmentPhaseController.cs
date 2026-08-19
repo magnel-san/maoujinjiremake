@@ -39,6 +39,9 @@ namespace DemonLordHR.Recruitment
 
     private readonly Dictionary<CharacterData, GameObject> _characterInstances = new Dictionary<CharacterData, GameObject>();
     private readonly Dictionary<CharacterData, GameObject> _resumeInstances = new Dictionary<CharacterData, GameObject>();
+    /// <summary>整列/吹き飛び演出を既に再生したキャラ。スタンプ/パンチのジェスチャー確定時に即座に再生するため、
+    /// ジャンル終了時の一括処理で二重に再生しないようにするためのガード。</summary>
+    private readonly HashSet<CharacterData> _animatedCharacters = new HashSet<CharacterData>();
 
     public event Action<RecruitmentGenre> OnGenreStarted;
     public event Action<CharacterData> OnCharacterHired;
@@ -70,6 +73,8 @@ namespace DemonLordHR.Recruitment
       {
         _resumeUIController.OnHireIntent += HandleHireIntent;
         _resumeUIController.OnRejectIntent += HandleRejectIntent;
+        _resumeUIController.OnStamped += HandleStamped;
+        _resumeUIController.OnThrown += HandleThrown;
       }
     }
 
@@ -83,6 +88,8 @@ namespace DemonLordHR.Recruitment
       {
         _resumeUIController.OnHireIntent -= HandleHireIntent;
         _resumeUIController.OnRejectIntent -= HandleRejectIntent;
+        _resumeUIController.OnStamped -= HandleStamped;
+        _resumeUIController.OnThrown -= HandleThrown;
       }
     }
 
@@ -93,6 +100,7 @@ namespace DemonLordHR.Recruitment
       _endRequested = false;
       _decided.Clear();
       _candidates.Clear();
+      _animatedCharacters.Clear();
 
       // 3.1: 「{ジャンル名}のキャラの採用試験を開始する」UI表示
       yield return new WaitForSeconds(_settings != null ? _settings.genreStartDisplaySeconds : 3f);
@@ -125,9 +133,12 @@ namespace DemonLordHR.Recruitment
         }
       }
 
-      // 3.6: 終了演出
+      // 3.6: 終了演出（スタンプ/パンチ確定時に既に再生済みのキャラはスキップする。
+      // ここに残るのは「面接終了する」で自動不採用になった、ジェスチャー確定を経ていないキャラだけのはず）。
       foreach (var candidate in _candidates)
       {
+        if (_animatedCharacters.Contains(candidate)) continue;
+
         if (_hiredCharacters.Contains(candidate))
         {
           PlayHireLineup(candidate, _hiredCharacters.IndexOf(candidate));
@@ -227,6 +238,20 @@ namespace DemonLordHR.Recruitment
     private void HandleEndInterviewRequested()
     {
       _endRequested = true;
+    }
+
+    /// <summary>採用スタンプが確定した瞬間、すぐに整列演出を再生する。</summary>
+    private void HandleStamped(CharacterData character)
+    {
+      if (!_animatedCharacters.Add(character)) return;
+      PlayHireLineup(character, _hiredCharacters.IndexOf(character));
+    }
+
+    /// <summary>不採用の一撃が確定した瞬間、すぐに吹き飛び演出を再生する。</summary>
+    private void HandleThrown(CharacterData character)
+    {
+      if (!_animatedCharacters.Add(character)) return;
+      PlayRejectKnockback(character);
     }
 
     /// <summary>3.3/3.4: 決定後、履歴書表示を非表示化し、対象キャラをハイライト色でティントする。</summary>

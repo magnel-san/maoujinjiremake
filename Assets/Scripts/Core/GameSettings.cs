@@ -36,12 +36,14 @@ namespace DemonLordHR.Core
     public float resumeViewHoldSeconds = 3f;
     [Tooltip("履歴書「もどる」ボタンの保持秒数")]
     public float resumeBackHoldSeconds = 3f;
+    [Tooltip("履歴書の「採用にする」「不採用にする」ボタンの保持秒数")]
+    public float resumeDecisionHoldSeconds = 2f;
+    [Tooltip("採用スタンプを押した後、履歴書を表示したままにする秒数（この後、自動的に閉じて次の候補へ）")]
+    public float hireStampDisplaySeconds = 1.5f;
     [Tooltip("採用時のキャラハイライト色")]
     public Color hireHighlightColor = new Color(1f, 0.85f, 0.2f);
     [Tooltip("不採用時のキャラハイライト色")]
     public Color rejectHighlightColor = new Color(0.6f, 0.1f, 0.1f);
-    [Tooltip("3D履歴書の丸まりアニメーションのステップ数")]
-    public int resumeCrumpleSteps = 4;
     [Tooltip("不採用キャラの吹き飛び威力（共通デフォルト）")]
     public float rejectKnockbackForce = 8f;
     [Tooltip("不採用キャラの吹き飛び方向（ローカル、共通デフォルト）")]

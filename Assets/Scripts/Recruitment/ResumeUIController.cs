@@ -16,9 +16,15 @@ namespace DemonLordHR.Recruitment
   }
 
   /// <summary>
-  /// 履歴書表示・ページ送り・採用/不採用の意思表示・丸めアニメーション制御。
-  /// 仕様書3.2〜3.4に対応。3D履歴書の丸まり・投げる演出は、専用アセットが無くても
-  /// 進行を確認できるよう、拡大縮小・移動による手続き的な演出で仮実装している。
+  /// 履歴書表示・ページ送り・採用/不採用の意思表示を制御する。
+  ///
+  /// 採用/不採用の決定は「ポインター保持ボタン」で行う（ジェスチャーだけに頼ると、
+  /// 誤検出・無反応が起きやすく、取り消しの効かない重要な決定には不向きなため）。
+  /// ボタンでの決定はあくまで「意思決定」で、その後に続くジェスチャー
+  /// （ハンコを押す＝右手を振る／殴る＝右手を突き出す）は「確定の演出」という役割分担にしている。
+  /// ポインターと確定ジェスチャーが両方とも右手を使うため、ボタンを指し続けながら腕を振ることは
+  /// 物理的にできない。そのため「ボタン保持完了 → プロンプト表示 → ここで初めてジェスチャー待ち」という
+  /// 時間差のある2段階フローにし、ボタンから手を離してから腕を振れるようにしている。
   /// </summary>
   public class ResumeUIController : MonoBehaviour
   {
@@ -27,22 +33,21 @@ namespace DemonLordHR.Recruitment
     [Tooltip("採用のハンコを押す間、右手を「ハンコ持ち手」モデルに差し替えるために使う")]
     [SerializeField] private HandTrackingController _handTrackingController;
 
-    [Header("2D履歴書（採用/不採用決定前）")]
+    [Header("2D履歴書")]
     [SerializeField] private GameObject _resumeImageRoot;
     [SerializeField] private Image _resumeImage;
     [Tooltip("採用のハンコを押した際に表示するスタンプ画像のルート")]
     [SerializeField] private GameObject _stampImageRoot;
 
-    [Header("3D履歴書（不採用時のみ）")]
-    [SerializeField] private GameObject _resume3DRoot;
-    [Tooltip("丸まりきった状態のスケール（1が等倍）")]
-    [SerializeField] private float _crumpledScale = 0.35f;
-    [Tooltip("丸め1段階ごとに追加で回転させる角度")]
-    [SerializeField] private float _crumpleRotationPerStep = 20f;
-    [Tooltip("投げる演出で移動させる距離・方向（ローカル）")]
-    [SerializeField] private Vector3 _throwLocalOffset = new Vector3(0f, 0.5f, 2f);
-    [Tooltip("投げる演出の所要時間")]
-    [SerializeField] private float _throwDuration = 0.4f;
+    [Header("採用/不採用ボタン（決定前のみ表示）")]
+    [SerializeField] private CircularHoldButton _hireButton;
+    [SerializeField] private CircularHoldButton _rejectButton;
+
+    [Header("決定後のジェスチャー案内")]
+    [Tooltip("採用ボタン確定後に表示する「ハンコを押せ！」等のUI")]
+    [SerializeField] private GameObject _stampPromptUI;
+    [Tooltip("不採用ボタン確定後に表示する「殴れ！」等のUI")]
+    [SerializeField] private GameObject _punchPromptUI;
 
     [Header("戻るボタン")]
     [Tooltip("履歴書表示中、決定前に閉じるための円状ボタン")]
@@ -50,21 +55,26 @@ namespace DemonLordHR.Recruitment
 
     private CharacterData _currentCharacter;
     private int _currentPage;
-    private int _crumpleStep;
     private bool _isOpen;
     private ResumeDecision _decision;
+    private Coroutine _autoCloseCoroutine;
 
     public event Action<CharacterData> OnHireIntent;
     public event Action<CharacterData> OnRejectIntent;
+    /// <summary>採用スタンプ確定（ハンコを振り下ろした）時に発火。整列演出のトリガーに使う。</summary>
     public event Action<CharacterData> OnStamped;
+    /// <summary>不採用の一撃確定（殴った）時に発火。吹き飛び演出のトリガーに使う。</summary>
     public event Action<CharacterData> OnThrown;
 
     private void Awake()
     {
       // 履歴書を開くまでは何も表示しない。
       _resumeImageRoot?.SetActive(false);
-      _resume3DRoot?.SetActive(false);
       _stampImageRoot?.SetActive(false);
+      _stampPromptUI?.SetActive(false);
+      _punchPromptUI?.SetActive(false);
+      if (_hireButton != null) _hireButton.gameObject.SetActive(false);
+      if (_rejectButton != null) _rejectButton.gameObject.SetActive(false);
       if (_backButton != null) _backButton.gameObject.SetActive(false);
     }
 
@@ -79,6 +89,16 @@ namespace DemonLordHR.Recruitment
         _backButton.HoldSeconds = _settings != null ? _settings.resumeBackHoldSeconds : 3f;
         _backButton.OnTriggered += HandleBackRequested;
       }
+      if (_hireButton != null)
+      {
+        _hireButton.HoldSeconds = _settings != null ? _settings.resumeDecisionHoldSeconds : 2f;
+        _hireButton.OnTriggered += HandleHireButtonConfirmed;
+      }
+      if (_rejectButton != null)
+      {
+        _rejectButton.HoldSeconds = _settings != null ? _settings.resumeDecisionHoldSeconds : 2f;
+        _rejectButton.OnTriggered += HandleRejectButtonConfirmed;
+      }
     }
 
     private void OnDisable()
@@ -87,44 +107,59 @@ namespace DemonLordHR.Recruitment
       {
         _gestureRecognizer.OnGestureDetected -= HandleGesture;
       }
-      if (_backButton != null)
-      {
-        _backButton.OnTriggered -= HandleBackRequested;
-      }
+      if (_backButton != null) _backButton.OnTriggered -= HandleBackRequested;
+      if (_hireButton != null) _hireButton.OnTriggered -= HandleHireButtonConfirmed;
+      if (_rejectButton != null) _rejectButton.OnTriggered -= HandleRejectButtonConfirmed;
     }
 
     public void Open(CharacterData character)
     {
-      // 既に同じキャラの決定作業（丸め途中など）が進んでいる場合、再オープンで状態を壊さない。
+      // 既に同じキャラの決定作業が進んでいる場合、再オープンで状態を壊さない。
       if (_isOpen && _currentCharacter == character && _decision != ResumeDecision.None) return;
+
+      if (_autoCloseCoroutine != null)
+      {
+        StopCoroutine(_autoCloseCoroutine);
+        _autoCloseCoroutine = null;
+      }
 
       _currentCharacter = character;
       _currentPage = 0;
-      _crumpleStep = 0;
       _decision = ResumeDecision.None;
       _isOpen = true;
 
-      _resume3DRoot?.SetActive(false);
-      if (_resume3DRoot != null)
-      {
-        _resume3DRoot.transform.localScale = Vector3.one;
-        _resume3DRoot.transform.localRotation = Quaternion.identity;
-      }
       _stampImageRoot?.SetActive(false);
+      _stampPromptUI?.SetActive(false);
+      _punchPromptUI?.SetActive(false);
       _resumeImageRoot?.SetActive(true);
       if (_backButton != null) _backButton.gameObject.SetActive(true);
+      ShowDecisionButtons(true);
       _handTrackingController?.SetRightHandStampMode(false);
       ApplyPageSprite();
     }
 
     public void Close()
     {
+      if (_autoCloseCoroutine != null)
+      {
+        StopCoroutine(_autoCloseCoroutine);
+        _autoCloseCoroutine = null;
+      }
+
       _isOpen = false;
       _resumeImageRoot?.SetActive(false);
-      _resume3DRoot?.SetActive(false);
+      _stampPromptUI?.SetActive(false);
+      _punchPromptUI?.SetActive(false);
+      ShowDecisionButtons(false);
       if (_backButton != null) _backButton.gameObject.SetActive(false);
       _handTrackingController?.SetRightHandStampMode(false);
       _currentCharacter = null;
+    }
+
+    private void ShowDecisionButtons(bool show)
+    {
+      if (_hireButton != null) _hireButton.gameObject.SetActive(show);
+      if (_rejectButton != null) _rejectButton.gameObject.SetActive(show);
     }
 
     private void HandleBackRequested()
@@ -149,65 +184,34 @@ namespace DemonLordHR.Recruitment
       ApplyPageSprite();
     }
 
-    private void BeginReject()
+    /// <summary>「採用にする」ボタンの保持が完了した瞬間＝意思決定。履歴書は表示したままにする。</summary>
+    private void HandleHireButtonConfirmed()
     {
+      if (!_isOpen || _decision != ResumeDecision.None) return;
+
+      _decision = ResumeDecision.Hired;
+      ShowDecisionButtons(false);
+      if (_backButton != null) _backButton.gameObject.SetActive(false);
+      OnHireIntent?.Invoke(_currentCharacter);
+
+      // ここで初めて右手をハンコ持ち手に切り替え、「ハンコを押せ」の合図を出す。
+      // ボタンへのポインター保持が終わった後なので、腕を振ってもポインター操作と競合しない。
+      _handTrackingController?.SetRightHandStampMode(true);
+      _stampPromptUI?.SetActive(true);
+    }
+
+    /// <summary>「不採用にする」ボタンの保持が完了した瞬間＝意思決定。履歴書はいったん消す。</summary>
+    private void HandleRejectButtonConfirmed()
+    {
+      if (!_isOpen || _decision != ResumeDecision.None) return;
+
       _decision = ResumeDecision.Rejected;
+      ShowDecisionButtons(false);
+      if (_backButton != null) _backButton.gameObject.SetActive(false);
       _resumeImageRoot?.SetActive(false);
-      _resume3DRoot?.SetActive(true);
-      _crumpleStep = 0;
-      ApplyCrumpleVisual();
       OnRejectIntent?.Invoke(_currentCharacter);
-    }
 
-    private void AdvanceCrumple()
-    {
-      var maxSteps = _settings != null ? _settings.resumeCrumpleSteps : 4;
-      if (_crumpleStep >= maxSteps) return;
-      _crumpleStep++;
-      ApplyCrumpleVisual();
-      // _crumpleStepがmaxStepsに達すると IsFullyCrumpled() がtrueになり、
-      // 次のRightFistPunchOutで「投げろ」側の分岐（ThrowResumeAndClose）に入る。
-    }
-
-    /// <summary>専用アセットが無くても進捗が分かるよう、拡大縮小と回転で「丸まっていく」様子を表現する。</summary>
-    private void ApplyCrumpleVisual()
-    {
-      if (_resume3DRoot == null) return;
-
-      var maxSteps = _settings != null ? _settings.resumeCrumpleSteps : 4;
-      var ratio = maxSteps <= 0 ? 0f : (float)_crumpleStep / maxSteps;
-      _resume3DRoot.transform.localScale = Vector3.Lerp(Vector3.one, Vector3.one * _crumpledScale, ratio);
-      _resume3DRoot.transform.localRotation = Quaternion.Euler(0f, 0f, _crumpleRotationPerStep * _crumpleStep);
-    }
-
-    private bool IsFullyCrumpled()
-    {
-      var maxSteps = _settings != null ? _settings.resumeCrumpleSteps : 4;
-      return _crumpleStep >= maxSteps;
-    }
-
-    private IEnumerator ThrowResumeAndClose()
-    {
-      OnThrown?.Invoke(_currentCharacter);
-
-      if (_resume3DRoot != null)
-      {
-        var start = _resume3DRoot.transform.localPosition;
-        var destination = start + _throwLocalOffset;
-        var elapsed = 0f;
-        var duration = Mathf.Max(_throwDuration, 0.01f);
-
-        while (elapsed < duration)
-        {
-          elapsed += Time.deltaTime;
-          _resume3DRoot.transform.localPosition = Vector3.Lerp(start, destination, elapsed / duration);
-          yield return null;
-        }
-
-        _resume3DRoot.transform.localPosition = start;
-      }
-
-      Close();
+      _punchPromptUI?.SetActive(true);
     }
 
     private void HandleGesture(GestureType type)
@@ -220,42 +224,43 @@ namespace DemonLordHR.Recruitment
           if (_decision == ResumeDecision.None) TurnPage();
           break;
 
-        case GestureType.BigCircleOverhead:
-          if (_decision == ResumeDecision.None)
-          {
-            _decision = ResumeDecision.Hired;
-            OnHireIntent?.Invoke(_currentCharacter);
-            _handTrackingController?.SetRightHandStampMode(true);
-            // ハイライトはRecruitmentPhaseController側で行う。
-          }
-          break;
-
-        case GestureType.ArmsCross:
-          if (_decision == ResumeDecision.None)
-          {
-            BeginReject();
-          }
-          break;
-
-        case GestureType.ClapNarrow:
-          if (_decision == ResumeDecision.Rejected && !IsFullyCrumpled())
-          {
-            AdvanceCrumple();
-          }
-          break;
-
         case GestureType.RightFistPunchOut:
           if (_decision == ResumeDecision.Hired)
           {
-            _stampImageRoot?.SetActive(true);
-            OnStamped?.Invoke(_currentCharacter);
+            ConfirmStamp();
           }
-          else if (_decision == ResumeDecision.Rejected && IsFullyCrumpled())
+          else if (_decision == ResumeDecision.Rejected)
           {
-            StartCoroutine(ThrowResumeAndClose());
+            ConfirmPunch();
           }
           break;
       }
+    }
+
+    private void ConfirmStamp()
+    {
+      _stampPromptUI?.SetActive(false);
+      _stampImageRoot?.SetActive(true);
+      _handTrackingController?.SetRightHandStampMode(false);
+      OnStamped?.Invoke(_currentCharacter);
+
+      // 「履歴書は表示したまま」にしつつ、少し見せたら自動的に次の候補へ戻れるようにする。
+      var delay = _settings != null ? _settings.hireStampDisplaySeconds : 1.5f;
+      _autoCloseCoroutine = StartCoroutine(AutoCloseAfter(delay));
+    }
+
+    private void ConfirmPunch()
+    {
+      _punchPromptUI?.SetActive(false);
+      OnThrown?.Invoke(_currentCharacter);
+      Close();
+    }
+
+    private IEnumerator AutoCloseAfter(float seconds)
+    {
+      yield return new WaitForSeconds(Mathf.Max(seconds, 0f));
+      _autoCloseCoroutine = null;
+      Close();
     }
   }
 }
