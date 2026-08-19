@@ -9,8 +9,6 @@ namespace DemonLordHR.HandTracking
     HoopBothHands,
     /// <summary>頭の上で大きな丸をつくる → 採用の意思表示</summary>
     BigCircleOverhead,
-    /// <summary>右手をグーで思いっきり突き出す → ハンコ／投げる／決定パンチ</summary>
-    RightFistPunchOut,
     /// <summary>胸の前で腕をクロス → 不採用の意思表示</summary>
     ArmsCross,
     /// <summary>拍手のように両手を胸の前で近づけ離す → 履歴書を丸める</summary>

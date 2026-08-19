@@ -21,7 +21,8 @@ namespace DemonLordHR.Recruitment
   /// 採用/不採用の決定は「ポインター保持ボタン」で行う（ジェスチャーだけに頼ると、
   /// 誤検出・無反応が起きやすく、取り消しの効かない重要な決定には不向きなため）。
   /// ボタンでの決定はあくまで「意思決定」で、その後に続くジェスチャー
-  /// （ハンコを押す＝右手を上から下に振り下ろす／殴る＝右手を前に突き出す）は「確定の演出」という役割分担にしている。
+  /// （ハンコを押す＝右手を上から下に振り下ろす／殴る＝拳を前に突き出す、Combatミニゲームと共通）は
+  /// 「確定の演出」という役割分担にしている。
   /// ポインターと確定ジェスチャーが両方とも右手を使うため、ボタンを指し続けながら腕を振ることは
   /// 物理的にできない。そのため「ボタン保持完了 → プロンプト表示 → ここで初めてジェスチャー待ち」という
   /// 時間差のある2段階フローにし、ボタンから手を離してから腕を振れるようにしている。
@@ -218,7 +219,7 @@ namespace DemonLordHR.Recruitment
 
     /// <summary>
     /// 「不採用にする」ボタンの保持が完了した瞬間。こちらもまだ最終決定にはしない
-    /// （<see cref="OnRejectIntent"/>は発火しない）。実際に殴る(RightFistPunchOut)まで待つ。
+    /// （<see cref="OnRejectIntent"/>は発火しない）。実際に殴る(AlternatingPunch)まで待つ。
     /// </summary>
     private void HandleRejectButtonConfirmed()
     {
@@ -251,8 +252,9 @@ namespace DemonLordHR.Recruitment
           }
           break;
 
-        // 殴る＝前方への突き出しはそのままRightFistPunchOutを使う。
-        case GestureType.RightFistPunchOut:
+        // 殴る＝Combatミニゲームと同じAlternatingPunch（左右どちらかの拳を突き出す）を流用する。
+        // ジェスチャーの種類を増やさず、Combatと感覚を統一するため。
+        case GestureType.AlternatingPunch:
           if (_decision == ResumeDecision.Rejected)
           {
             ConfirmPunch();

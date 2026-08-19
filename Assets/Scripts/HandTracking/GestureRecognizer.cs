@@ -237,7 +237,6 @@ namespace DemonLordHR.HandTracking
 
       DetectHoopBothHands(dt);
       DetectBigCircleOverhead();
-      DetectRightFistPunchOut(dt);
       DetectArmsCross(dt);
       DetectClapNarrow(dt);
       DetectHorizontalSwipes(dt);
@@ -315,18 +314,6 @@ namespace DemonLordHR.HandTracking
       if (leftFast || rightFast)
       {
         if (TryFire(GestureType.BigCircleOverhead)) _overheadArmed = false;
-      }
-    }
-
-    // 右手をグーで思いっきり突き出す。速度だけでなく、直近の短い時間で実際に大きく
-    // 前方へ動いたこと（GetForwardDisplacement）も要求し、小さな手先の動きでの誤発火を防ぐ。
-    private void DetectRightFistPunchOut(float dt)
-    {
-      if (!IsFist(_right)) return;
-      var vel = Velocity(_right, _prevRight, dt);
-      if (vel.z > _punchVelocityThreshold && _rightPunchTrace.GetForwardDisplacement() > _punchMinDistance)
-      {
-        if (TryFire(GestureType.RightFistPunchOut)) _rightPunchTrace.Clear();
       }
     }
 
