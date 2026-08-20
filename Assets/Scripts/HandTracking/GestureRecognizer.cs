@@ -61,8 +61,6 @@ namespace DemonLordHR.HandTracking
     [SerializeField] private float _fastVelocityThreshold = 1.2f;
     [Tooltip("近接（タッチ等）とみなす距離のしきい値（m）")]
     [SerializeField] private float _touchDistanceThreshold = 0.04f;
-    [Tooltip("頭上とみなす、カメラ画面内での高さ（0=下端 1=上端）。画面上部にあれば頭上とみなす。")]
-    [SerializeField, Range(0f, 1f)] private float _overheadViewportY = 0.75f;
     [Tooltip("胸の高さとみなす、カメラ画面内での高さの範囲（0=下端 1=上端）")]
     [SerializeField, Range(0f, 1f)] private float _chestViewportYMin = 0.35f;
     [SerializeField, Range(0f, 1f)] private float _chestViewportYMax = 0.65f;
@@ -70,13 +68,6 @@ namespace DemonLordHR.HandTracking
     [SerializeField, Range(0f, 1f)] private float _hammerRaisedViewportY = 0.55f;
     [Tooltip("HandsTogether判定に必要な保持秒数")]
     [SerializeField] private float _handsTogetherHoldSeconds = 0.3f;
-
-    [Header("輪っかポーズ（履歴書のページ送り）")]
-    [Tooltip("輪っかポーズとみなす、画面内での親指先端⇔人差し指先端の距離（0〜1の正規化座標）。" +
-      "カメラ画面上での見た目の距離で判定するため、輪をカメラに向けて（眼鏡をかけるように）構えた時に反応する。")]
-    [SerializeField] private float _hoopScreenDistanceThreshold = 0.06f;
-    [Tooltip("輪っかポーズを保持する必要がある秒数（誤検出防止）")]
-    [SerializeField] private float _hoopHoldSeconds = 0.25f;
 
     [Header("腕クロス（不採用の意思表示）")]
     [Tooltip("腕クロスと判定するまでの保持秒数（誤検出防止）")]
@@ -106,12 +97,6 @@ namespace DemonLordHR.HandTracking
     [Tooltip("回転とみなす最低速度（m/s）。これより遅い動きは角度を積算しない（静止時のノイズ対策）")]
     [SerializeField] private float _valveMinSpeed = 0.3f;
 
-    [Header("採用/不採用/ページ送りの排他制御")]
-    [Tooltip("採用(ハンマー)・不採用(パンチ)・ページ送り(輪っか)はいずれも取り消しの効かない/紛らわしい判定なので、" +
-      "いずれか1つが発火した直後は、他の2つが同じ動作の余韻（振り終わりの動き等）で誤って " +
-      "発火し始めないよう、この秒数だけ受付を止める。")]
-    [SerializeField] private float _decisionGestureLockSeconds = 0.5f;
-
     public event Action<GestureType> OnGestureDetected;
 
     private readonly Dictionary<GestureType, float> _cooldownUntil = new Dictionary<GestureType, float>();
@@ -132,20 +117,12 @@ namespace DemonLordHR.HandTracking
     private float _handsTogetherTimer;
     private bool _handsTogetherArmed = true;
 
-    private float _hoopHoldTimer;
-    private bool _hoopArmed = true; // ポーズが崩れて初めて次の発火を許可する
-
     private float _armsCrossHoldTimer;
     private bool _armsCrossArmed = true;
-
-    private bool _overheadArmed = true;
 
     private readonly AngleTrace _rightElbowTrace = new AngleTrace();
     private readonly AngleTrace _leftElbowTrace = new AngleTrace();
 
-    private float _decisionGestureLockedUntil;
-
-    private SwingDetector _clapDetector;
     private SwingDetector _rightSwipeDetector;
     private SwingDetector _leftSwipeDetector;
     private SwingDetector _wingFlapDetector;
@@ -164,7 +141,6 @@ namespace DemonLordHR.HandTracking
       _rightElbowAngleFilter = new OneEuroFilter(_filterMinCutoff, _filterBeta);
       _leftElbowAngleFilter = new OneEuroFilter(_filterMinCutoff, _filterBeta);
 
-      _clapDetector = new SwingDetector(_fastVelocityThreshold * 0.5f, _swingExitRatio);
       _rightSwipeDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
       _leftSwipeDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
       _wingFlapDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
@@ -276,14 +252,12 @@ namespace DemonLordHR.HandTracking
         new Vector3(_x.Filter(v.x, time), _y.Filter(v.y, time), _z.Filter(v.z, time));
     }
 
-    /// <summary>片手ぶんの平滑化フィルタ一式。手首・指先・画面内高さ・画面内の親指/人差し指位置を持つ。</summary>
+    /// <summary>片手ぶんの平滑化フィルタ一式。手首・指先・画面内高さを持つ。</summary>
     private class HandFilterSet
     {
       public readonly Vector3Filter Wrist;
       public readonly Vector3Filter[] FingerTips;
       public readonly OneEuroFilter ViewportY;
-      public readonly Vector3Filter ThumbScreen;
-      public readonly Vector3Filter IndexScreen;
 
       public HandFilterSet(float minCutoff, float beta)
       {
@@ -294,8 +268,6 @@ namespace DemonLordHR.HandTracking
           new Vector3Filter(minCutoff, beta), new Vector3Filter(minCutoff, beta),
         };
         ViewportY = new OneEuroFilter(minCutoff, beta);
-        ThumbScreen = new Vector3Filter(minCutoff, beta);
-        IndexScreen = new Vector3Filter(minCutoff, beta);
       }
     }
 
@@ -420,11 +392,6 @@ namespace DemonLordHR.HandTracking
       /// <summary>カメラ画面内での手首の高さ（0=下端 1=上端）。頭上/胸の高さ等、絶対的な高さの判定に使う。
       /// ワールドランドマークは手自体を原点とする相対座標のため、絶対的な高さの判定には使えない。</summary>
       public float viewportY;
-      /// <summary>カメラ画面内での親指先端・人差し指先端の位置（0〜1正規化座標、Y-up）。
-      /// 輪っかポーズはカメラに向けて構えた時だけ画面上で重なって見えるべきなので、
-      /// ワールド座標の3D距離ではなくこの2D位置で判定する。</summary>
-      public Vector2 thumbTipScreen;
-      public Vector2 indexTipScreen;
       public float timestamp;
 
       public static HandFrame Empty => new HandFrame { valid = false, fingerTips = new Vector3[5] };
@@ -629,13 +596,9 @@ namespace DemonLordHR.HandTracking
         timestamp = time,
       };
 
-      if (normalizedLandmarks != null && normalizedLandmarks.Count > 8)
+      if (normalizedLandmarks != null && normalizedLandmarks.Count > 0)
       {
         frame.viewportY = filters.ViewportY.Filter(1f - normalizedLandmarks[0].y, time);
-        var thumb = filters.ThumbScreen.Filter(new Vector3(normalizedLandmarks[4].x, 1f - normalizedLandmarks[4].y, 0f), time);
-        var index = filters.IndexScreen.Filter(new Vector3(normalizedLandmarks[8].x, 1f - normalizedLandmarks[8].y, 0f), time);
-        frame.thumbTipScreen = new Vector2(thumb.x, thumb.y);
-        frame.indexTipScreen = new Vector2(index.x, index.y);
       }
 
       return frame;
@@ -645,10 +608,7 @@ namespace DemonLordHR.HandTracking
     {
       var dt = Mathf.Max(Time.deltaTime, 0.0001f);
 
-      DetectHoopBothHands(dt);
-      DetectBigCircleOverhead();
       DetectArmsCross(dt);
-      DetectClapNarrow(dt);
       DetectHorizontalSwipes(dt);
       DetectWingFlap(dt);
       DetectArmSwingBoth(dt);
@@ -668,101 +628,10 @@ namespace DemonLordHR.HandTracking
 
     private bool IsFist(in HandFrame hand) => hand.valid && hand.AverageFistDistance() < _fistDistanceThreshold;
 
-    private bool DecisionGesturesLocked => Time.time < _decisionGestureLockedUntil;
-
-    /// <summary>
-    /// 採用(ハンマー)・不採用(パンチ)・ページ送り(輪っか)のうちどれか1つが物理的に検出された瞬間に呼ぶ。
-    /// 同じ動作の一部が他の2つの判定条件も満たしてしまい、意図と違う方が発火する（あるいは両方発火する）
-    /// のを防ぐため、他の2つの進行中の状態を強制的に打ち切り、しばらく再アームを禁止する。
-    /// 発火した本人の状態はここでは触らない（SwingDetector自身の再アーム条件をそのまま活かすため）。
-    /// </summary>
-    private void HandleDecisionGestureFired(GestureType firedType)
-    {
-      _decisionGestureLockedUntil = Time.time + _decisionGestureLockSeconds;
-
-      if (firedType != GestureType.HoopBothHands)
-      {
-        _hoopHoldTimer = 0f;
-        _hoopArmed = true; // ロック中はcanEnterが弾くので、再アーム状態にしておいて問題ない
-      }
-      if (firedType != GestureType.HammerSwingDown)
-      {
-        _rightHammerDetector.Reset();
-        _leftHammerDetector.Reset();
-      }
-      if (firedType != GestureType.AlternatingPunch)
-      {
-        _rightPunchDetector.Reset();
-        _leftPunchDetector.Reset();
-      }
-    }
-
     private Vector3 Velocity(in HandFrame current, in HandFrame previous, float dt)
     {
       if (!current.valid || !previous.valid) return Vector3.zero;
       return (current.wrist - previous.wrist) / dt;
-    }
-
-    // 両手で親指と人差し指で輪をつくり、カメラに向ける（眼鏡をかけるような構え）。
-    // 画面上の見た目の距離で判定するため、輪をカメラに向けた時だけ反応する。
-    // 保持時間(dwell)＋崩れるまで再発火しない(release)方式で、1回のポーズにつき1回だけ発火する。
-    private void DetectHoopBothHands(float dt)
-    {
-      if (!_left.valid || !_right.valid)
-      {
-        _hoopHoldTimer = 0f;
-        _hoopArmed = true;
-        return;
-      }
-
-      var leftHoop = Vector2.Distance(_left.thumbTipScreen, _left.indexTipScreen) < _hoopScreenDistanceThreshold;
-      var rightHoop = Vector2.Distance(_right.thumbTipScreen, _right.indexTipScreen) < _hoopScreenDistanceThreshold;
-
-      if (!leftHoop || !rightHoop)
-      {
-        _hoopHoldTimer = 0f;
-        _hoopArmed = true; // ポーズが崩れたので次のポーズで再度発火できるようにする
-        return;
-      }
-
-      if (DecisionGesturesLocked)
-      {
-        // 採用/不採用の直後の余韻でページ送りが紛れ込まないよう、保持タイマーを進めない。
-        _hoopHoldTimer = 0f;
-        return;
-      }
-
-      _hoopHoldTimer += dt;
-      if (_hoopArmed && _hoopHoldTimer >= _hoopHoldSeconds)
-      {
-        _hoopArmed = false;
-        HandleDecisionGestureFired(GestureType.HoopBothHands);
-        TryFire(GestureType.HoopBothHands);
-      }
-    }
-
-    // 頭の上で大きな丸をつくる（片手または両手が頭上（画面上部）で高速に動いていることで近似）。
-    // 頭上から下りる(release)まで再発火しないようにし、頭上に留まっている間の連続発火を防ぐ。
-    private void DetectBigCircleOverhead()
-    {
-      var leftOverhead = _left.valid && _left.viewportY > _overheadViewportY;
-      var rightOverhead = _right.valid && _right.viewportY > _overheadViewportY;
-
-      if (!leftOverhead && !rightOverhead)
-      {
-        _overheadArmed = true;
-        return;
-      }
-
-      if (!_overheadArmed) return;
-
-      var leftFast = leftOverhead && Velocity(_left, _prevLeft, Time.deltaTime).magnitude > _fastVelocityThreshold;
-      var rightFast = rightOverhead && Velocity(_right, _prevRight, Time.deltaTime).magnitude > _fastVelocityThreshold;
-
-      if (leftFast || rightFast)
-      {
-        if (TryFire(GestureType.BigCircleOverhead)) _overheadArmed = false;
-      }
     }
 
     // 胸の前で腕をクロス（左右の手首が体の中心線をまたいで入れ替わる）。
@@ -788,25 +657,6 @@ namespace DemonLordHR.HandTracking
       if (_armsCrossArmed && _armsCrossHoldTimer >= _armsCrossHoldSeconds)
       {
         if (TryFire(GestureType.ArmsCross)) _armsCrossArmed = false;
-      }
-    }
-
-    // 拍手のように両手を胸の前で近づけ離す。両手首の接近速度がピークを迎えた瞬間を1回とする。
-    private void DetectClapNarrow(float dt)
-    {
-      if (!_left.valid || !_right.valid || !_prevLeft.valid || !_prevRight.valid)
-      {
-        _clapDetector.Reset();
-        return;
-      }
-
-      var dist = Vector3.Distance(_left.wrist, _right.wrist);
-      var prevDist = Vector3.Distance(_prevLeft.wrist, _prevRight.wrist);
-      var closingSpeed = Mathf.Max((prevDist - dist) / dt, 0f);
-
-      if (_clapDetector.Update(closingSpeed) && dist < _touchDistanceThreshold * 3f)
-      {
-        TryFire(GestureType.ClapNarrow);
       }
     }
 
@@ -898,11 +748,10 @@ namespace DemonLordHR.HandTracking
       // これが無いと、前方への突き出し（パンチ）に多少の下向き成分が混ざっただけで
       // ハンマー側も同時に反応してしまう。
       var dominantlyVertical = Mathf.Abs(vel.y) >= Mathf.Abs(vel.z);
-      var canEnter = wasRaised && dominantlyVertical && !DecisionGesturesLocked;
+      var canEnter = wasRaised && dominantlyVertical;
 
       if (detector.Update(downwardSpeed, canEnter))
       {
-        HandleDecisionGestureFired(GestureType.HammerSwingDown);
         TryFire(GestureType.HammerSwingDown);
       }
     }
@@ -947,11 +796,9 @@ namespace DemonLordHR.HandTracking
       var dominantlyDownward = hand.valid && prevHand.valid
         && Mathf.Abs(hand.wrist.y - prevHand.wrist.y) > Mathf.Abs(hand.wrist.z - prevHand.wrist.z)
         && hand.wrist.y < prevHand.wrist.y;
-      var canEnter = IsFist(hand) && !dominantlyDownward && !DecisionGesturesLocked;
+      var canEnter = IsFist(hand) && !dominantlyDownward;
 
       if (!detector.Update(angleSpeed, canEnter)) return false;
-
-      HandleDecisionGestureFired(GestureType.AlternatingPunch);
 
       var angleIncreaseOk = trace.GetIncrease() > _punchMinAngleIncrease;
       trace.Clear();

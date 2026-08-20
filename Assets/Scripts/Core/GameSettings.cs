@@ -36,9 +36,6 @@ namespace DemonLordHR.Core
     public float resumeViewHoldSeconds = 3f;
     [Tooltip("履歴書「もどる」ボタンの保持秒数")]
     public float resumeBackHoldSeconds = 3f;
-    [Tooltip("履歴書を開いた直後、採用/不採用の確定ジェスチャー（ハンコ/パンチ）を受け付けるまでの猶予秒数。" +
-      "履歴書を読んでいる最中の無意識な腕の動きで誤って決定してしまうのを防ぐ「構え」の時間。")]
-    public float resumeGestureArmDelaySeconds = 1f;
     [Tooltip("採用スタンプを押した後、履歴書を表示したままにする秒数（この後、自動的に閉じて次の候補へ）")]
     public float hireStampDisplaySeconds = 1.5f;
     [Tooltip("不採用キャラの吹き飛び威力（共通デフォルト）")]

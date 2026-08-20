@@ -5,14 +5,8 @@ namespace DemonLordHR.HandTracking
   /// </summary>
   public enum GestureType
   {
-    /// <summary>両手で親指と人差し指で輪をつくる → 履歴書の別ページ表示</summary>
-    HoopBothHands,
-    /// <summary>頭の上で大きな丸をつくる → 採用の意思表示</summary>
-    BigCircleOverhead,
     /// <summary>胸の前で腕をクロス → 不採用の意思表示</summary>
     ArmsCross,
-    /// <summary>拍手のように両手を胸の前で近づけ離す → 履歴書を丸める</summary>
-    ClapNarrow,
     /// <summary>手で横に払う → 【遊泳】攻撃</summary>
     SwipeSideways,
     /// <summary>腕を翼のように上下に振る → 【飛行】操作</summary>

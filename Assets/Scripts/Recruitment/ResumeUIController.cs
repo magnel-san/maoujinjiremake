@@ -18,37 +18,25 @@ namespace DemonLordHR.Recruitment
   /// <summary>
   /// 履歴書表示・ページ送り・採用/不採用の意思表示を制御する。
   ///
-  /// 採用/不採用は「履歴書を開いている間、常にハンコ振り下ろし(採用)／パンチ(不採用)ジェスチャーだけで
-  /// 一撃確定」する。以前はポインター保持ボタンで仮決定してからジェスチャーで確定する2段階方式だったが、
-  /// 手を見せて操作すること自体を面白さの核に据えるなら、確定ジェスチャーの前に地味なポインター的当てを
-  /// 挟むのは本末転倒だった。ポインターと確定ジェスチャーが両方右手、という物理制約も、
-  /// 決定をジェスチャーだけで完結させることで自然に解消される（ポインターで的を狙う必要が無くなるため）。
+  /// 採用/不採用/ページ送りは、<see cref="ResumePoseRecognizer"/>が判定する3つの静止ポーズで行う
+  /// （腕クロス＝不採用、両手を挙げて輪＝採用、両手で輪っかを顔の近くに＝裏を見る）。
+  /// 速度や軌跡など「動き」に一切頼らない判定なので、腕を振っただけで誤って発火する、といった
+  /// 動きベースの誤検出が構造的に起こらない。同じポーズを2秒間保持し続けて初めて確定する。
   ///
-  /// 誤発火対策として、履歴書を開いた直後は<see cref="GameSettings.resumeGestureArmDelaySeconds"/>秒だけ
-  /// ジェスチャー判定を無効化する「構えの猶予」を設けている。それ以外は、殴る/振り下ろす動作自体の
-  /// 閾値（<see cref="GestureRecognizer"/>側でチューニング済み）を誤発火対策の主軸としている。
   /// 決定後の取り消しは用意していない（「魔王の決定は覆らない」という演出として割り切っている）。
   /// </summary>
   public class ResumeUIController : MonoBehaviour
   {
-    [SerializeField] private GestureRecognizer _gestureRecognizer;
+    [SerializeField] private ResumePoseRecognizer _resumePoseRecognizer;
     [SerializeField] private GameSettings _settings;
-    [Tooltip("履歴書を開いている間、右手を「ハンコ持ち手」モデルに差し替えるために使う")]
-    [SerializeField] private HandTrackingController _handTrackingController;
     [Tooltip("採用ジェスチャー時の資金不足チェックに使う（未設定の場合はチェックをスキップする）")]
     [SerializeField] private RecruitmentPhaseController _recruitmentController;
 
     [Header("2D履歴書")]
     [SerializeField] private GameObject _resumeImageRoot;
     [SerializeField] private Image _resumeImage;
-    [Tooltip("採用のハンコを押した際に表示するスタンプ画像のルート")]
+    [Tooltip("採用の丸を描いた際に表示するスタンプ画像のルート")]
     [SerializeField] private GameObject _stampImageRoot;
-
-    [Header("決定ジェスチャーの案内（履歴書を開いている間、常時表示）")]
-    [Tooltip("「ハンコを振り下ろせば採用」等の案内UI")]
-    [SerializeField] private GameObject _stampPromptUI;
-    [Tooltip("「殴れば不採用」等の案内UI")]
-    [SerializeField] private GameObject _punchPromptUI;
 
     [Header("戻るボタン")]
     [Tooltip("履歴書表示中、決定前に閉じるための円状ボタン")]
@@ -58,14 +46,13 @@ namespace DemonLordHR.Recruitment
     private int _currentPage;
     private bool _isOpen;
     private ResumeDecision _decision;
-    private float _gestureArmTime;
     private Coroutine _autoCloseCoroutine;
 
     public event Action<CharacterData> OnHireIntent;
     public event Action<CharacterData> OnRejectIntent;
-    /// <summary>採用スタンプ確定（ハンコを振り下ろした）時に発火。整列演出のトリガーに使う。</summary>
+    /// <summary>採用（丸）確定時に発火。整列演出のトリガーに使う。</summary>
     public event Action<CharacterData> OnStamped;
-    /// <summary>不採用の一撃確定（殴った）時に発火。吹き飛び演出のトリガーに使う。</summary>
+    /// <summary>不採用（罰）確定時に発火。吹き飛び演出のトリガーに使う。</summary>
     public event Action<CharacterData> OnThrown;
     /// <summary>履歴書を開いた時に発火。開いている間は他の候補の履歴書トリガーや
     /// 「面接終了する」ボタンを非表示にするために使う（複数の履歴書を同時に触れると状態が壊れるため）。</summary>
@@ -80,16 +67,14 @@ namespace DemonLordHR.Recruitment
       // 履歴書を開くまでは何も表示しない。
       _resumeImageRoot?.SetActive(false);
       _stampImageRoot?.SetActive(false);
-      _stampPromptUI?.SetActive(false);
-      _punchPromptUI?.SetActive(false);
       if (_backButton != null) _backButton.gameObject.SetActive(false);
     }
 
     private void OnEnable()
     {
-      if (_gestureRecognizer != null)
+      if (_resumePoseRecognizer != null)
       {
-        _gestureRecognizer.OnGestureDetected += HandleGesture;
+        _resumePoseRecognizer.OnPoseConfirmed += HandlePoseConfirmed;
       }
       if (_backButton != null)
       {
@@ -100,9 +85,9 @@ namespace DemonLordHR.Recruitment
 
     private void OnDisable()
     {
-      if (_gestureRecognizer != null)
+      if (_resumePoseRecognizer != null)
       {
-        _gestureRecognizer.OnGestureDetected -= HandleGesture;
+        _resumePoseRecognizer.OnPoseConfirmed -= HandlePoseConfirmed;
       }
       if (_backButton != null) _backButton.OnTriggered -= HandleBackRequested;
     }
@@ -122,18 +107,11 @@ namespace DemonLordHR.Recruitment
       _currentPage = 0;
       _decision = ResumeDecision.None;
       _isOpen = true;
-      _gestureArmTime = Time.time + (_settings != null ? _settings.resumeGestureArmDelaySeconds : 1f);
 
       _stampImageRoot?.SetActive(false);
       _resumeImageRoot?.SetActive(true);
       if (_backButton != null) _backButton.gameObject.SetActive(true);
-      // 開いている間は常に「振り下ろせば採用／殴れば不採用」の両方を案内し続ける。
-      _stampPromptUI?.SetActive(true);
-      _punchPromptUI?.SetActive(true);
-      // ジェスチャー検出自体はMediaPipeの生の手の動きで行うため、見た目のモデルを
-      // ハンコ持ち手に切り替えてもパンチ判定には影響しない。開いた瞬間から切り替えておくことで、
-      // 「いつでも振り下ろせる」ことを視覚的に示す。
-      _handTrackingController?.SetRightHandStampMode(true);
+      _resumePoseRecognizer?.SetCapturing(true);
       ApplyPageSprite();
 
       OnOpened?.Invoke(character);
@@ -150,10 +128,8 @@ namespace DemonLordHR.Recruitment
       _isOpen = false;
       _resumeImageRoot?.SetActive(false);
       _stampImageRoot?.SetActive(false);
-      _stampPromptUI?.SetActive(false);
-      _punchPromptUI?.SetActive(false);
       if (_backButton != null) _backButton.gameObject.SetActive(false);
-      _handTrackingController?.SetRightHandStampMode(false);
+      _resumePoseRecognizer?.SetCapturing(false);
       _currentCharacter = null;
 
       OnClosed?.Invoke();
@@ -181,52 +157,36 @@ namespace DemonLordHR.Recruitment
       ApplyPageSprite();
     }
 
-    private void HandleGesture(GestureType type)
+    private void HandlePoseConfirmed(ResumePose pose)
     {
       if (!_isOpen || _currentCharacter == null || _decision != ResumeDecision.None) return;
 
-      switch (type)
+      switch (pose)
       {
-        case GestureType.HoopBothHands:
+        // 両手で輪っか、顔の近く＝履歴書の裏を見る（ページ送り）
+        case ResumePose.FlipPage:
           TurnPage();
           break;
 
-        // ハンコを押す＝上から下へ振り下ろす動作なので、労働ミニゲームのハンマー打ちと同じ
-        // HammerSwingDown（振り上げていた手が急速に下降）を流用する。
-        case GestureType.HammerSwingDown:
-          TryConfirmHire();
+        // 両手を挙げて輪＝採用
+        case ResumePose.Hire:
+          ConfirmHire();
           break;
 
-        // 殴る＝Combatミニゲームと同じAlternatingPunch（左右どちらかの拳を突き出す）を流用する。
-        // ジェスチャーの種類を増やさず、Combatと感覚を統一するため。
-        case GestureType.AlternatingPunch:
-          TryConfirmReject();
+        // 腕クロス＝不採用
+        case ResumePose.Reject:
+          ConfirmReject();
           break;
       }
     }
 
-    private void TryConfirmHire()
+    private void ConfirmHire()
     {
-      if (Time.time < _gestureArmTime) return; // 開いた直後の構えの猶予中は無視する
       if (_recruitmentController != null && !_recruitmentController.CanAfford(_currentCharacter)) return; // 資金不足
 
-      ConfirmStamp();
-    }
-
-    private void TryConfirmReject()
-    {
-      if (Time.time < _gestureArmTime) return;
-
-      ConfirmPunch();
-    }
-
-    private void ConfirmStamp()
-    {
       _decision = ResumeDecision.Hired;
-      _stampPromptUI?.SetActive(false);
-      _punchPromptUI?.SetActive(false);
+      _resumePoseRecognizer?.SetCapturing(false);
       _stampImageRoot?.SetActive(true);
-      _handTrackingController?.SetRightHandStampMode(false);
 
       OnHireIntent?.Invoke(_currentCharacter);
       OnStamped?.Invoke(_currentCharacter);
@@ -236,11 +196,10 @@ namespace DemonLordHR.Recruitment
       _autoCloseCoroutine = StartCoroutine(AutoCloseAfter(delay));
     }
 
-    private void ConfirmPunch()
+    private void ConfirmReject()
     {
       _decision = ResumeDecision.Rejected;
-      _stampPromptUI?.SetActive(false);
-      _punchPromptUI?.SetActive(false);
+      _resumePoseRecognizer?.SetCapturing(false);
       _resumeImageRoot?.SetActive(false);
 
       OnRejectIntent?.Invoke(_currentCharacter);
