@@ -3109,7 +3109,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -400}
+  m_AnchoredPosition: {x: 0, y: -500}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1565594759
@@ -3127,10 +3127,10 @@ MonoBehaviour:
   _resumePoseRecognizer: {fileID: 1673845863}
   _stateText: {fileID: 494401532}
   _progressGauge: {fileID: 1565594760}
-  _noneLabel: "\u8A8D\u8B58\u4E2D: \u306A\u3057"
-  _rejectLabel: "\u8A8D\u8B58\u4E2D: \u4E0D\u63A1\u7528\uFF08\u8155\u30AF\u30ED\u30B9\uFF09"
-  _hireLabel: "\u8A8D\u8B58\u4E2D: \u63A1\u7528\uFF08\u4E21\u624B\u3067\u8F2A\uFF09"
-  _flipPageLabel: "\u8A8D\u8B58\u4E2D: \u88CF\u3092\u898B\u308B\uFF08\u8F2A\u3063\u304B\uFF09"
+  _noneLabel: "\u8A8D\u8B58\u4E2D: none"
+  _rejectLabel: "\u8A8D\u8B58\u4E2D: reject"
+  _hireLabel: "\u8A8D\u8B58\u4E2D: hire"
+  _flipPageLabel: "\u8A8D\u8B58\u4E2D: check"
 --- !u!114 &1565594760
 MonoBehaviour:
   m_ObjectHideFlags: 0
