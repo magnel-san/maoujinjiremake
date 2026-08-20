@@ -70,6 +70,7 @@ namespace DemonLordHR.HandTracking
     private float? _leftViewportYEma, _rightViewportYEma;
     private float? _wristDistEma;
     private float? _leftHoopEma, _rightHoopEma;
+    private float? _leftRingYEma, _rightRingYEma;
 
     public ResumePose CurrentPose { get; private set; } = ResumePose.None;
     public float HoldProgress01 => _holdSeconds > 0f ? Mathf.Clamp01(_holdTimer / _holdSeconds) : 0f;
@@ -127,6 +128,7 @@ namespace DemonLordHR.HandTracking
       _leftViewportYEma = _rightViewportYEma = null;
       _wristDistEma = null;
       _leftHoopEma = _rightHoopEma = null;
+      _leftRingYEma = _rightRingYEma = null;
     }
 
     private ResumePose ClassifyCurrentPose(HandLandmarkerResult result)
@@ -170,8 +172,13 @@ namespace DemonLordHR.HandTracking
       }
 
       // 両手で輪っか、顔の近く（裏を見る）：両手とも親指・人差し指で輪をつくり、顔の高さにある。
+      // 高さの判定には手首(0)ではなく輪っか自体（親指先端・人差し指先端の中点）の高さを使う。
+      // 顔の近くに構えると、手首は頬や顎の高さに留まったまま指先だけが目の高さまで上がるため、
+      // 手首基準だと実際は顔の近くにあるのに判定が通らない、という食い違いが起きるため。
+      var leftRingY = Smooth(ref _leftRingYEma, 1f - (left[4].y + left[8].y) * 0.5f);
+      var rightRingY = Smooth(ref _rightRingYEma, 1f - (right[4].y + right[8].y) * 0.5f);
       if (leftHoop < _hoopScreenDistance && rightHoop < _hoopScreenDistance
-        && leftY > _faceHeightViewportY && rightY > _faceHeightViewportY)
+        && leftRingY > _faceHeightViewportY && rightRingY > _faceHeightViewportY)
       {
         return ResumePose.FlipPage;
       }
