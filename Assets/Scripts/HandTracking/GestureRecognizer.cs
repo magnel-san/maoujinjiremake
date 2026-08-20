@@ -106,6 +106,12 @@ namespace DemonLordHR.HandTracking
     [Tooltip("回転とみなす最低速度（m/s）。これより遅い動きは角度を積算しない（静止時のノイズ対策）")]
     [SerializeField] private float _valveMinSpeed = 0.3f;
 
+    [Header("採用/不採用/ページ送りの排他制御")]
+    [Tooltip("採用(ハンマー)・不採用(パンチ)・ページ送り(輪っか)はいずれも取り消しの効かない/紛らわしい判定なので、" +
+      "いずれか1つが発火した直後は、他の2つが同じ動作の余韻（振り終わりの動き等）で誤って " +
+      "発火し始めないよう、この秒数だけ受付を止める。")]
+    [SerializeField] private float _decisionGestureLockSeconds = 0.5f;
+
     public event Action<GestureType> OnGestureDetected;
 
     private readonly Dictionary<GestureType, float> _cooldownUntil = new Dictionary<GestureType, float>();
@@ -136,6 +142,8 @@ namespace DemonLordHR.HandTracking
 
     private readonly AngleTrace _rightElbowTrace = new AngleTrace();
     private readonly AngleTrace _leftElbowTrace = new AngleTrace();
+
+    private float _decisionGestureLockedUntil;
 
     private SwingDetector _clapDetector;
     private SwingDetector _rightSwipeDetector;
@@ -660,6 +668,35 @@ namespace DemonLordHR.HandTracking
 
     private bool IsFist(in HandFrame hand) => hand.valid && hand.AverageFistDistance() < _fistDistanceThreshold;
 
+    private bool DecisionGesturesLocked => Time.time < _decisionGestureLockedUntil;
+
+    /// <summary>
+    /// 採用(ハンマー)・不採用(パンチ)・ページ送り(輪っか)のうちどれか1つが物理的に検出された瞬間に呼ぶ。
+    /// 同じ動作の一部が他の2つの判定条件も満たしてしまい、意図と違う方が発火する（あるいは両方発火する）
+    /// のを防ぐため、他の2つの進行中の状態を強制的に打ち切り、しばらく再アームを禁止する。
+    /// 発火した本人の状態はここでは触らない（SwingDetector自身の再アーム条件をそのまま活かすため）。
+    /// </summary>
+    private void HandleDecisionGestureFired(GestureType firedType)
+    {
+      _decisionGestureLockedUntil = Time.time + _decisionGestureLockSeconds;
+
+      if (firedType != GestureType.HoopBothHands)
+      {
+        _hoopHoldTimer = 0f;
+        _hoopArmed = true; // ロック中はcanEnterが弾くので、再アーム状態にしておいて問題ない
+      }
+      if (firedType != GestureType.HammerSwingDown)
+      {
+        _rightHammerDetector.Reset();
+        _leftHammerDetector.Reset();
+      }
+      if (firedType != GestureType.AlternatingPunch)
+      {
+        _rightPunchDetector.Reset();
+        _leftPunchDetector.Reset();
+      }
+    }
+
     private Vector3 Velocity(in HandFrame current, in HandFrame previous, float dt)
     {
       if (!current.valid || !previous.valid) return Vector3.zero;
@@ -688,10 +725,19 @@ namespace DemonLordHR.HandTracking
         return;
       }
 
+      if (DecisionGesturesLocked)
+      {
+        // 採用/不採用の直後の余韻でページ送りが紛れ込まないよう、保持タイマーを進めない。
+        _hoopHoldTimer = 0f;
+        return;
+      }
+
       _hoopHoldTimer += dt;
       if (_hoopArmed && _hoopHoldTimer >= _hoopHoldSeconds)
       {
-        if (TryFire(GestureType.HoopBothHands)) _hoopArmed = false;
+        _hoopArmed = false;
+        HandleDecisionGestureFired(GestureType.HoopBothHands);
+        TryFire(GestureType.HoopBothHands);
       }
     }
 
@@ -848,9 +894,15 @@ namespace DemonLordHR.HandTracking
       var vel = Velocity(hand, prev, dt);
       var downwardSpeed = Mathf.Max(-vel.y, 0f);
       var wasRaised = prev.viewportY > _hammerRaisedViewportY;
+      // 縦方向優勢（横/奥行き方向より下向きが勝っている）motionだけをハンマーとして受け付ける。
+      // これが無いと、前方への突き出し（パンチ）に多少の下向き成分が混ざっただけで
+      // ハンマー側も同時に反応してしまう。
+      var dominantlyVertical = Mathf.Abs(vel.y) >= Mathf.Abs(vel.z);
+      var canEnter = wasRaised && dominantlyVertical && !DecisionGesturesLocked;
 
-      if (detector.Update(downwardSpeed, wasRaised))
+      if (detector.Update(downwardSpeed, canEnter))
       {
+        HandleDecisionGestureFired(GestureType.HammerSwingDown);
         TryFire(GestureType.HammerSwingDown);
       }
     }
@@ -866,9 +918,9 @@ namespace DemonLordHR.HandTracking
     // PoseLandmarkerの更新はHandLandmarkerとは非同期のため、HandlePoseResultから駆動する。
     private void DetectAlternatingPunch()
     {
-      var rightFired = EvaluatePunch(_right, _pose.rightArmValid, _pose.rightElbowAngle,
+      var rightFired = EvaluatePunch(_right, _prevRight, _pose.rightArmValid, _pose.rightElbowAngle,
         _prevPose.rightArmValid, _prevPose.rightElbowAngle, _rightPunchDetector, _rightElbowTrace);
-      var leftFired = EvaluatePunch(_left, _pose.leftArmValid, _pose.leftElbowAngle,
+      var leftFired = EvaluatePunch(_left, _prevLeft, _pose.leftArmValid, _pose.leftElbowAngle,
         _prevPose.leftArmValid, _prevPose.leftElbowAngle, _leftPunchDetector, _leftElbowTrace);
 
       if (rightFired || leftFired)
@@ -877,7 +929,7 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    private bool EvaluatePunch(in HandFrame hand, bool armValid, float angle, bool prevArmValid, float prevAngle,
+    private bool EvaluatePunch(in HandFrame hand, in HandFrame prevHand, bool armValid, float angle, bool prevArmValid, float prevAngle,
       SwingDetector detector, AngleTrace trace)
     {
       if (!armValid || !prevArmValid)
@@ -889,7 +941,17 @@ namespace DemonLordHR.HandTracking
       var dt = Mathf.Max(_pose.timestamp - _prevPose.timestamp, 0.0001f);
       var angleSpeed = Mathf.Max((angle - prevAngle) / dt, 0f);
 
-      if (!detector.Update(angleSpeed, IsFist(hand))) return false;
+      // ハンマー（縦振り）との取り違え防止：手が縦方向優勢に下降している最中はパンチの立ち上がりを許可しない。
+      // 肘の伸展角度だけでは「振り下ろして腕が伸びる」と「突き出して腕が伸びる」を区別できないため、
+      // 生の手首移動方向で補強する。
+      var dominantlyDownward = hand.valid && prevHand.valid
+        && Mathf.Abs(hand.wrist.y - prevHand.wrist.y) > Mathf.Abs(hand.wrist.z - prevHand.wrist.z)
+        && hand.wrist.y < prevHand.wrist.y;
+      var canEnter = IsFist(hand) && !dominantlyDownward && !DecisionGesturesLocked;
+
+      if (!detector.Update(angleSpeed, canEnter)) return false;
+
+      HandleDecisionGestureFired(GestureType.AlternatingPunch);
 
       var angleIncreaseOk = trace.GetIncrease() > _punchMinAngleIncrease;
       trace.Clear();
