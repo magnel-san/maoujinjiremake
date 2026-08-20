@@ -52,7 +52,7 @@ namespace DemonLordHR.HandTracking
     [Header("両手を挙げて輪（採用）")]
     [Tooltip("挙げているとみなす、カメラ画面内での高さ（0=下端 1=上端）")]
     [SerializeField, Range(0f, 1f)] private float _raisedViewportY = 0.6f;
-    [Tooltip("両手が触れ合っているとみなす、手首同士の画面内距離（0〜1正規化座標）")]
+    [Tooltip("両手が触れ合っているとみなす、中指先端同士の画面内距離（0〜1正規化座標）")]
     [SerializeField] private float _handsTogetherDistance = 0.12f;
 
     [Header("両手で輪っか（裏を見る）")]
@@ -68,7 +68,7 @@ namespace DemonLordHR.HandTracking
 
     private float? _leftWristXEma, _rightWristXEma;
     private float? _leftViewportYEma, _rightViewportYEma;
-    private float? _wristDistEma;
+    private float? _handsDistEma;
     private float? _leftHoopEma, _rightHoopEma;
     private float? _leftRingYEma, _rightRingYEma;
 
@@ -126,7 +126,7 @@ namespace DemonLordHR.HandTracking
     {
       _leftWristXEma = _rightWristXEma = null;
       _leftViewportYEma = _rightViewportYEma = null;
-      _wristDistEma = null;
+      _handsDistEma = null;
       _leftHoopEma = _rightHoopEma = null;
       _leftRingYEma = _rightRingYEma = null;
     }
@@ -155,7 +155,10 @@ namespace DemonLordHR.HandTracking
       var rightX = Smooth(ref _rightWristXEma, right[0].x);
       var leftY = Smooth(ref _leftViewportYEma, 1f - left[0].y);
       var rightY = Smooth(ref _rightViewportYEma, 1f - right[0].y);
-      var wristDist = Smooth(ref _wristDistEma, Distance2D(left[0], right[0]));
+      // 中指の先端同士の距離＝「両手が触れ合っているか」の基準にする。手首同士の距離だと、
+      // 頭上で腕を弧状に曲げて手を合わせるポーズ（肘が外に開き、手首は離れたまま指先だけが
+      // 触れ合う）で実際より遠いと判定されてしまうため。
+      var handsDist = Smooth(ref _handsDistEma, Distance2D(left[12], right[12]));
       var leftHoop = Smooth(ref _leftHoopEma, Distance2D(left[4], left[8]));
       var rightHoop = Smooth(ref _rightHoopEma, Distance2D(right[4], right[8]));
 
@@ -165,8 +168,8 @@ namespace DemonLordHR.HandTracking
         return ResumePose.Reject;
       }
 
-      // 両手を挙げて輪（採用）：両手とも高い位置にあり、手首同士が触れ合うくらい近い。
-      if (leftY > _raisedViewportY && rightY > _raisedViewportY && wristDist < _handsTogetherDistance)
+      // 両手を挙げて輪（採用）：両手とも高い位置にあり、指先同士が触れ合うくらい近い。
+      if (leftY > _raisedViewportY && rightY > _raisedViewportY && handsDist < _handsTogetherDistance)
       {
         return ResumePose.Hire;
       }
