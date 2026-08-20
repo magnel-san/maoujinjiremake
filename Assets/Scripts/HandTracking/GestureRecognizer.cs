@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Mediapipe.Tasks.Components.Containers;
 using Mediapipe.Tasks.Vision.HandLandmarker;
+using Mediapipe.Tasks.Vision.PoseLandmarker;
 using UnityEngine;
 
 namespace DemonLordHR.HandTracking
@@ -31,10 +32,19 @@ namespace DemonLordHR.HandTracking
   ///      手が収まる(exit)まで再アームしない（単発の閾値超えでの即時発火・連続発火を防ぐ）。
   ///    - 連続回転（バルブ回し）だけは「止まるまで再発火しない」方式と相性が悪いため、
   ///      <see cref="RotationTracker"/>で実際に回転した角度を積算し、一定角度ごとに繰り返し発火する。
+  ///
+  /// パンチ（不採用の意思表示）だけは特殊で、手首の速度・画面内サイズの拡大速度など
+  /// カメラへ向かう動き自体を直接測る方式を色々試したが、いずれもMediaPipeが不得意とする軸
+  /// （奥行き、または見た目のサイズはプレイヤーがカメラからどれだけ離れて座っているかに依存する）に
+  /// 頼らざるを得なかった。代わりに<see cref="PoseTrackingController"/>から肩・肘・手首を取得し、
+  /// 「肘の伸展角度（肩-肘-手首のなす角）」の変化速度で判定する。角度はプレイヤーの座る位置に
+  /// 依存しないスケール不変な特徴量であり、より頑健。
   /// </summary>
   public class GestureRecognizer : MonoBehaviour
   {
     [SerializeField] private HandTrackingController _handTrackingController;
+    [Tooltip("パンチ（不採用）判定の肘伸展角度に使う。未設定の場合、パンチは検出されなくなる。")]
+    [SerializeField] private PoseTrackingController _poseTrackingController;
 
     [Header("信号平滑化（One Euro Filter）")]
     [Tooltip("静止時のジッター抑制の強さ。小さいほど滑らかになるが、動き出しの追従が遅れる。")]
@@ -72,17 +82,17 @@ namespace DemonLordHR.HandTracking
     [Tooltip("腕クロスと判定するまでの保持秒数（誤検出防止）")]
     [SerializeField] private float _armsCrossHoldSeconds = 0.25f;
 
-    [Header("パンチ（右手突き出し／両拳交互）")]
-    [Tooltip("パンチの拡大率を測る時間窓（秒）")]
+    [Header("パンチ（右手突き出し／両拳交互）：肘の伸展角度で判定")]
+    [Tooltip("肘の角度増加を測る時間窓（秒）")]
     [SerializeField] private float _punchWindowSeconds = 0.3f;
-    [Tooltip("パンチとみなす、画面内での手の見た目サイズの拡大速度（1秒あたり何倍拡大したか。例:1.8=180%/秒）。" +
-      "数値を上げるほど、より素早く突き出さないと発火しなくなる。反応しない場合はまずこの値を下げて確認する。" +
-      "MediaPipeのワールドZ(奥行き)推定は速い前方動作で乱れやすい既知の問題があるため使わず、" +
-      "画面内で手が急に大きく見えるようになる速さ（Optical Expansion／視覚のTau理論と同じ原理）で判定する。")]
-    [SerializeField] private float _punchLoomThreshold = 1.8f;
-    [Tooltip("パンチとみなす、時間窓内での画面内サイズの最小相対拡大率（例:0.25=25%拡大）。" +
-      "拡大速度だけでなく実際に大きく突き出したことも要求することで、小さな手先の動きでの誤発火を防ぐ。")]
-    [SerializeField] private float _punchMinSpanGrowth = 0.25f;
+    [Tooltip("パンチとみなす、肘が伸びる速さ（度/秒）。数値を上げるほど、より素早く突き出さないと発火しなくなる。" +
+      "反応しない場合はまずこの値を下げて確認する。" +
+      "手首の奥行き(Z)や見た目のサイズはMediaPipeの推定誤差やプレイヤーの座る距離に影響されるため使わず、" +
+      "肩-肘-手首のなす角（距離に依存しないスケール不変な特徴量）の変化速度で判定する。")]
+    [SerializeField] private float _punchAngleSpeedThreshold = 250f;
+    [Tooltip("パンチとみなす、時間窓内での肘の角度の最小増加量（度）。" +
+      "速度だけでなく実際に大きく腕を伸ばしたことも要求することで、小さな動きでの誤発火を防ぐ。")]
+    [SerializeField] private float _punchMinAngleIncrease = 35f;
 
     [Header("スイング系ジェスチャー共通（速度ピーク検出）")]
     [Tooltip("拍手・スワイプ・羽ばたき・両腕振り・ハンマー・パンチに共通の再アーム条件。" +
@@ -108,6 +118,11 @@ namespace DemonLordHR.HandTracking
     private HandFilterSet _leftFilter;
     private HandFilterSet _rightFilter;
 
+    private PoseFrame _pose = PoseFrame.Empty;
+    private PoseFrame _prevPose = PoseFrame.Empty;
+    private OneEuroFilter _rightElbowAngleFilter;
+    private OneEuroFilter _leftElbowAngleFilter;
+
     private float _handsTogetherTimer;
     private bool _handsTogetherArmed = true;
 
@@ -119,8 +134,8 @@ namespace DemonLordHR.HandTracking
 
     private bool _overheadArmed = true;
 
-    private readonly SpanTrace _rightPunchTrace = new SpanTrace();
-    private readonly SpanTrace _leftPunchTrace = new SpanTrace();
+    private readonly AngleTrace _rightElbowTrace = new AngleTrace();
+    private readonly AngleTrace _leftElbowTrace = new AngleTrace();
 
     private SwingDetector _clapDetector;
     private SwingDetector _rightSwipeDetector;
@@ -138,6 +153,8 @@ namespace DemonLordHR.HandTracking
     {
       _leftFilter = new HandFilterSet(_filterMinCutoff, _filterBeta);
       _rightFilter = new HandFilterSet(_filterMinCutoff, _filterBeta);
+      _rightElbowAngleFilter = new OneEuroFilter(_filterMinCutoff, _filterBeta);
+      _leftElbowAngleFilter = new OneEuroFilter(_filterMinCutoff, _filterBeta);
 
       _clapDetector = new SwingDetector(_fastVelocityThreshold * 0.5f, _swingExitRatio);
       _rightSwipeDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
@@ -146,22 +163,22 @@ namespace DemonLordHR.HandTracking
       _armSwingDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
       _rightHammerDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
       _leftHammerDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
-      _rightPunchDetector = new SwingDetector(_punchLoomThreshold, _swingExitRatio);
-      _leftPunchDetector = new SwingDetector(_punchLoomThreshold, _swingExitRatio);
+      _rightPunchDetector = new SwingDetector(_punchAngleSpeedThreshold, _swingExitRatio);
+      _leftPunchDetector = new SwingDetector(_punchAngleSpeedThreshold, _swingExitRatio);
       _rightValveTracker = new RotationTracker(_valveMinSpeed, _valveRotationDegreesToFire);
       _leftValveTracker = new RotationTracker(_valveMinSpeed, _valveRotationDegreesToFire);
     }
 
-    /// <summary>直近の短い時間窓での見た目の手のサイズ（screenSpan）を記録し、実際にどれだけ拡大したか
-    /// （画面内サイズの相対拡大率）を求める。瞬間の拡大速度だけで判定すると、小さな手先の動きでも
-    /// 一瞬だけ速度が出て誤発火するため、「大きく突き出す」動作を要求するパンチ判定にはこちらを使う。</summary>
-    private class SpanTrace
+    /// <summary>直近の短い時間窓での肘の伸展角度を記録し、実際にどれだけ増加したかを求める。
+    /// 瞬間の角速度だけで判定すると、小さな腕の動きでも一瞬だけ角速度が出て誤発火するため、
+    /// 「大きく腕を伸ばす」動作を要求するパンチ判定にはこちらを使う。</summary>
+    private class AngleTrace
     {
-      private readonly List<(float span, float time)> _points = new List<(float, float)>();
+      private readonly List<(float angle, float time)> _points = new List<(float, float)>();
 
-      public void Add(float span, float time, float windowSeconds)
+      public void Add(float angle, float time, float windowSeconds)
       {
-        _points.Add((span, time));
+        _points.Add((angle, time));
         while (_points.Count > 1 && time - _points[0].time > windowSeconds)
         {
           _points.RemoveAt(0);
@@ -170,13 +187,11 @@ namespace DemonLordHR.HandTracking
 
       public void Clear() => _points.Clear();
 
-      /// <summary>時間窓内での画面内サイズ(screenSpan)の相対拡大率（例:0.3=30%拡大）。</summary>
-      public float GetRelativeSpanGrowth()
+      /// <summary>時間窓内での肘角度の増加量（度）。</summary>
+      public float GetIncrease()
       {
         if (_points.Count < 2) return 0f;
-        var first = _points[0].span;
-        if (first < 0.0001f) return 0f;
-        return (_points[_points.Count - 1].span - first) / first;
+        return _points[_points.Count - 1].angle - _points[0].angle;
       }
     }
 
@@ -253,8 +268,7 @@ namespace DemonLordHR.HandTracking
         new Vector3(_x.Filter(v.x, time), _y.Filter(v.y, time), _z.Filter(v.z, time));
     }
 
-    /// <summary>片手ぶんの平滑化フィルタ一式。手首・指先・画面内高さ・画面内の親指/人差し指位置・
-    /// 画面内での手の見た目サイズ(screenSpan)を持つ。</summary>
+    /// <summary>片手ぶんの平滑化フィルタ一式。手首・指先・画面内高さ・画面内の親指/人差し指位置を持つ。</summary>
     private class HandFilterSet
     {
       public readonly Vector3Filter Wrist;
@@ -262,7 +276,6 @@ namespace DemonLordHR.HandTracking
       public readonly OneEuroFilter ViewportY;
       public readonly Vector3Filter ThumbScreen;
       public readonly Vector3Filter IndexScreen;
-      public readonly OneEuroFilter ScreenSpan;
 
       public HandFilterSet(float minCutoff, float beta)
       {
@@ -275,7 +288,6 @@ namespace DemonLordHR.HandTracking
         ViewportY = new OneEuroFilter(minCutoff, beta);
         ThumbScreen = new Vector3Filter(minCutoff, beta);
         IndexScreen = new Vector3Filter(minCutoff, beta);
-        ScreenSpan = new OneEuroFilter(minCutoff, beta);
       }
     }
 
@@ -405,10 +417,6 @@ namespace DemonLordHR.HandTracking
       /// ワールド座標の3D距離ではなくこの2D位置で判定する。</summary>
       public Vector2 thumbTipScreen;
       public Vector2 indexTipScreen;
-      /// <summary>画面内での手の見た目のサイズ（手首⇔中指付け根の正規化座標での距離）。
-      /// カメラに近づくほど大きくなる。MediaPipeのワールドZ推定は速い動きで乱れやすいため、
-      /// 「カメラへ向かって突き出したか」の判定はこちらの拡大速度も併用する（Optical Expansion）。</summary>
-      public float screenSpan;
       public float timestamp;
 
       public static HandFrame Empty => new HandFrame { valid = false, fingerTips = new Vector3[5] };
@@ -421,11 +429,28 @@ namespace DemonLordHR.HandTracking
       }
     }
 
+    /// <summary>PoseLandmarkerから抽出した、パンチ判定に必要な最小限のデータ（左右の肘伸展角度のみ）。</summary>
+    private struct PoseFrame
+    {
+      public bool valid;
+      public bool rightArmValid;
+      public float rightElbowAngle;
+      public bool leftArmValid;
+      public float leftElbowAngle;
+      public float timestamp;
+
+      public static PoseFrame Empty => new PoseFrame { valid = false };
+    }
+
     private void OnEnable()
     {
       if (_handTrackingController != null)
       {
         _handTrackingController.OnHandLandmarkerResult += HandleResult;
+      }
+      if (_poseTrackingController != null)
+      {
+        _poseTrackingController.OnPoseLandmarkerResult += HandlePoseResult;
       }
     }
 
@@ -434,6 +459,10 @@ namespace DemonLordHR.HandTracking
       if (_handTrackingController != null)
       {
         _handTrackingController.OnHandLandmarkerResult -= HandleResult;
+      }
+      if (_poseTrackingController != null)
+      {
+        _poseTrackingController.OnPoseLandmarkerResult -= HandlePoseResult;
       }
     }
 
@@ -467,9 +496,6 @@ namespace DemonLordHR.HandTracking
       _left = newLeft.valid ? newLeft : HandFrame.Empty;
       _right = newRight.valid ? newRight : HandFrame.Empty;
 
-      if (_left.valid) _leftPunchTrace.Add(_left.screenSpan, Time.time, _punchWindowSeconds); else _leftPunchTrace.Clear();
-      if (_right.valid) _rightPunchTrace.Add(_right.screenSpan, Time.time, _punchWindowSeconds); else _rightPunchTrace.Clear();
-
       // 手がロストした時は「振り」の途中状態を持ち越さない（再検出時に誤ってピーク完了扱いされるのを防ぐ）。
       if (leftWasValid && !_left.valid)
       {
@@ -491,6 +517,72 @@ namespace DemonLordHR.HandTracking
       }
 
       Evaluate();
+    }
+
+    /// <summary>
+    /// PoseLandmarkerの検出結果が届くたびに呼ばれる。HandLandmarker側とは別の非同期ループなので、
+    /// パンチ判定（<see cref="DetectAlternatingPunch"/>）はここで駆動する
+    /// （<see cref="Evaluate"/>はHandLandmarker側のフレームレートで動くため）。
+    /// </summary>
+    private void HandlePoseResult(PoseLandmarkerResult result)
+    {
+      _prevPose = _pose;
+      _pose = BuildPoseFrame(result);
+
+      if (_pose.rightArmValid) _rightElbowTrace.Add(_pose.rightElbowAngle, _pose.timestamp, _punchWindowSeconds);
+      else { _rightElbowTrace.Clear(); _rightPunchDetector.Reset(); }
+
+      if (_pose.leftArmValid) _leftElbowTrace.Add(_pose.leftElbowAngle, _pose.timestamp, _punchWindowSeconds);
+      else { _leftElbowTrace.Clear(); _leftPunchDetector.Reset(); }
+
+      DetectAlternatingPunch();
+    }
+
+    private PoseFrame BuildPoseFrame(PoseLandmarkerResult result)
+    {
+      if (result.poseLandmarks == null || result.poseLandmarks.Count == 0) return PoseFrame.Empty;
+
+      var lm = result.poseLandmarks[0].landmarks;
+      if (lm == null || lm.Count < 17) return PoseFrame.Empty;
+
+      var time = Time.time;
+      var frame = new PoseFrame { valid = true, timestamp = time };
+
+      // MediaPipeのPose関節ラベルは「入力画像が鏡像である」ことを前提にLeft/Rightが割り振られている。
+      // HandLandmarkerの左右反転（IsRightHand参照）と同じ理由で、このパイプラインは鏡像化していないため、
+      // MediaPipeが"left_*"と呼ぶ側（11:肩,13:肘,15:手首）が実際のプレイヤーの右腕になる。
+      if (TryComputeElbowAngle(lm, 11, 13, 15, out var rawRight))
+      {
+        frame.rightArmValid = true;
+        frame.rightElbowAngle = _rightElbowAngleFilter.Filter(rawRight, time);
+      }
+      if (TryComputeElbowAngle(lm, 12, 14, 16, out var rawLeft))
+      {
+        frame.leftArmValid = true;
+        frame.leftElbowAngle = _leftElbowAngleFilter.Filter(rawLeft, time);
+      }
+
+      return frame;
+    }
+
+    /// <summary>肩-肘-手首のなす角（度）を、画面内の正規化座標(X,Y)だけから求める。
+    /// 奥行き(Z)を使わないため、MediaPipeのZ推定誤差の影響を受けない。</summary>
+    private static bool TryComputeElbowAngle(List<NormalizedLandmark> lm, int shoulderIdx, int elbowIdx, int wristIdx, out float angleDegrees)
+    {
+      var shoulder = new Vector2(lm[shoulderIdx].x, lm[shoulderIdx].y);
+      var elbow = new Vector2(lm[elbowIdx].x, lm[elbowIdx].y);
+      var wrist = new Vector2(lm[wristIdx].x, lm[wristIdx].y);
+
+      var toShoulder = shoulder - elbow;
+      var toWrist = wrist - elbow;
+      if (toShoulder.sqrMagnitude < 1e-8f || toWrist.sqrMagnitude < 1e-8f)
+      {
+        angleDegrees = 0f;
+        return false;
+      }
+
+      angleDegrees = Vector2.Angle(toShoulder, toWrist);
+      return true;
     }
 
     /// MediaPipeのhandedness分類は「入力画像が鏡像である」ことを前提とするため、
@@ -529,18 +621,13 @@ namespace DemonLordHR.HandTracking
         timestamp = time,
       };
 
-      if (normalizedLandmarks != null && normalizedLandmarks.Count > 9)
+      if (normalizedLandmarks != null && normalizedLandmarks.Count > 8)
       {
         frame.viewportY = filters.ViewportY.Filter(1f - normalizedLandmarks[0].y, time);
         var thumb = filters.ThumbScreen.Filter(new Vector3(normalizedLandmarks[4].x, 1f - normalizedLandmarks[4].y, 0f), time);
         var index = filters.IndexScreen.Filter(new Vector3(normalizedLandmarks[8].x, 1f - normalizedLandmarks[8].y, 0f), time);
         frame.thumbTipScreen = new Vector2(thumb.x, thumb.y);
         frame.indexTipScreen = new Vector2(index.x, index.y);
-
-        // 手首(0)⇔中指付け根(9)の画面内距離。指先と違いグーを握っても大きく変形しない安定した基準点。
-        var wristScreen = new Vector2(normalizedLandmarks[0].x, 1f - normalizedLandmarks[0].y);
-        var midMcpScreen = new Vector2(normalizedLandmarks[9].x, 1f - normalizedLandmarks[9].y);
-        frame.screenSpan = filters.ScreenSpan.Filter(Vector2.Distance(wristScreen, midMcpScreen), time);
       }
 
       return frame;
@@ -558,7 +645,7 @@ namespace DemonLordHR.HandTracking
       DetectWingFlap(dt);
       DetectArmSwingBoth(dt);
       DetectHammerSwingDown(dt);
-      DetectAlternatingPunch(dt);
+      // DetectAlternatingPunchはHandlePoseResult側（PoseLandmarkerの更新頻度）で駆動する。
       DetectValveSpin(dt);
       DetectHandsTogether(dt);
     }
@@ -768,18 +855,21 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    // 両拳を交互に突き出す（パンチ）：拳の形で画面内サイズの拡大速度がピークを迎えた瞬間を1回とし、
-    // さらに直近の短い時間で実際に大きく突き出したこと（画面内サイズの拡大率）も要求する。
+    // 両拳を交互に突き出す（パンチ）：拳の形で肘が伸びる速さ（角速度）がピークを迎えた瞬間を1回とし、
+    // さらに直近の短い時間で実際に大きく腕を伸ばしたこと（角度の増加量）も要求する。
     //
     // カメラへ向かう動き（Z方向）はMediaPipeのワールド座標のZ(奥行き)推定が特に乱れやすい
-    // （速い動きで縮む/伸びる既知の問題がある）ため、Z速度は使わない。代わりに、視覚のTau理論
-    // （物体が近づく速さは、見た目のサイズをその拡大速度で割った値として単眼視でも正確に知覚できる、
-    // という視覚心理学の知見）と同じ原理で、画面内での手の見た目サイズの拡大速度(Optical Expansion)を
-    // 唯一の特徴量として使う。奥行きのセンサーが無いカメラでも安定して取得できる、より直接的な信号。
-    private void DetectAlternatingPunch(float dt)
+    // （速い動きで縮む/伸びる既知の問題がある）ため使わない。画面内サイズの拡大速度も
+    // プレイヤーがカメラからどれだけ離れて座っているかに応じて感度が変わってしまうため採用しなかった。
+    // 代わりに肩-肘-手首のなす角（PoseTrackingController経由）を使う。角度は距離に対してスケール不変
+    // （プレイヤーがどれだけ離れて座っていても同じ角度になる）なため、より頑健な唯一の特徴量にできる。
+    // PoseLandmarkerの更新はHandLandmarkerとは非同期のため、HandlePoseResultから駆動する。
+    private void DetectAlternatingPunch()
     {
-      var rightFired = EvaluatePunch(_right, _prevRight, dt, _rightPunchDetector, _rightPunchTrace);
-      var leftFired = EvaluatePunch(_left, _prevLeft, dt, _leftPunchDetector, _leftPunchTrace);
+      var rightFired = EvaluatePunch(_right, _pose.rightArmValid, _pose.rightElbowAngle,
+        _prevPose.rightArmValid, _prevPose.rightElbowAngle, _rightPunchDetector, _rightElbowTrace);
+      var leftFired = EvaluatePunch(_left, _pose.leftArmValid, _pose.leftElbowAngle,
+        _prevPose.leftArmValid, _prevPose.leftElbowAngle, _leftPunchDetector, _leftElbowTrace);
 
       if (rightFired || leftFired)
       {
@@ -787,25 +877,23 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    private bool EvaluatePunch(in HandFrame hand, in HandFrame prev, float dt, SwingDetector detector, SpanTrace trace)
+    private bool EvaluatePunch(in HandFrame hand, bool armValid, float angle, bool prevArmValid, float prevAngle,
+      SwingDetector detector, AngleTrace trace)
     {
-      if (!hand.valid || !prev.valid)
+      if (!armValid || !prevArmValid)
       {
         detector.Reset();
         return false;
       }
 
-      // 見た目サイズの相対拡大率（1秒あたり）。相対値にすることで、プレイヤーがカメラから
-      // どれだけ離れて座っているかへの依存を軽減している（完全な距離非依存ではないが実用上は十分）。
-      var spanGrowthRate = prev.screenSpan > 0.0001f
-        ? Mathf.Max((hand.screenSpan - prev.screenSpan) / prev.screenSpan / dt, 0f)
-        : 0f;
+      var dt = Mathf.Max(_pose.timestamp - _prevPose.timestamp, 0.0001f);
+      var angleSpeed = Mathf.Max((angle - prevAngle) / dt, 0f);
 
-      if (!detector.Update(spanGrowthRate, IsFist(hand))) return false;
+      if (!detector.Update(angleSpeed, IsFist(hand))) return false;
 
-      var spanGrowthOk = trace.GetRelativeSpanGrowth() > _punchMinSpanGrowth;
+      var angleIncreaseOk = trace.GetIncrease() > _punchMinAngleIncrease;
       trace.Clear();
-      return spanGrowthOk;
+      return angleIncreaseOk;
     }
 
     // 胸の前でぐるぐるバルブを回す：胸の高さで実際に回転した角度を積算し、一定角度ごとに繰り返し発火する。

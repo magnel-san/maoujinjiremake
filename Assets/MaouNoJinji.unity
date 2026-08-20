@@ -402,6 +402,7 @@ Transform:
   m_Children:
   - {fileID: 1883330670}
   - {fileID: 681877490}
+  - {fileID: 1905191367}
   - {fileID: 1474262217}
   m_Father: {fileID: 837406136}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1357,6 +1358,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.HandTracking.GestureRecognizer
   _handTrackingController: {fileID: 681877492}
+  _poseTrackingController: {fileID: 1905191366}
   _filterMinCutoff: 1
   _filterBeta: 0.5
   _defaultCooldown: 0.4
@@ -1371,9 +1373,9 @@ MonoBehaviour:
   _hoopScreenDistanceThreshold: 0.06
   _hoopHoldSeconds: 0.25
   _armsCrossHoldSeconds: 0.25
-  _punchVelocityThreshold: 1.5
-  _punchMinDistance: 0.08
   _punchWindowSeconds: 0.3
+  _punchAngleSpeedThreshold: 250
+  _punchMinAngleIncrease: 35
   _swingExitRatio: 0.35
   _valveRotationDegreesToFire: 300
   _valveMinSpeed: 0.3
@@ -2973,7 +2975,7 @@ MonoBehaviour:
   _maxDistance: 50
   _useRightHand: 1
   _smoothingTime: 0.08
-  _debugUseMouse: 1
+  _debugUseMouse: 0
 --- !u!1 &1481423234
 GameObject:
   m_ObjectHideFlags: 0
@@ -3808,6 +3810,56 @@ MonoBehaviour:
   _resumePrefab: {fileID: 6790205939971347944, guid: d60a7887c83876a45bc63a5dada0c36b, type: 3}
   _resumeLocalOffset: {x: 0, y: 1.2, z: 0.5}
   _resumeParent: {fileID: 1540701103}
+--- !u!1 &1905191365
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1905191367}
+  - component: {fileID: 1905191366}
+  m_Layer: 0
+  m_Name: PoseTrackingController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1905191366
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1905191365}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83e4a30c08402884ea55f5d6ae1d91d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.HandTracking.PoseTrackingController
+  _delegate: 0
+  _modelAssetPath: pose_landmarker_full.bytes
+  _minPoseDetectionConfidence: 0.5
+  _minPosePresenceConfidence: 0.5
+  _minTrackingConfidence: 0.5
+  _bootstrapPrefab: {fileID: 1384033818}
+--- !u!4 &1905191367
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1905191365}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 33.89581, y: 13.28132, z: 15.02876}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 154425002}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2044658238
 GameObject:
   m_ObjectHideFlags: 0
