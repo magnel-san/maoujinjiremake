@@ -67,26 +67,41 @@ namespace DemonLordHR.HandTracking
 
     private void Awake()
     {
-      if (_pointerVisual == null && _pointerVisualPrefab != null)
+      // シーン上に既にカーソル用オブジェクトが置いてある場合はそれを尊重し、生成しない。
+      if (_pointerVisual == null)
       {
-        var instance = Instantiate(_pointerVisualPrefab);
+        SetPointerVisual(_pointerVisualPrefab);
+      }
+    }
+
+    /// <summary>ポインターの見た目を差し替える。耐熱・知性・偵察のようにジャンルごとに専用の
+    /// カーソル（バルブハンドル・虫眼鏡等）を使いたい場合に呼ぶ。nullを渡すとInspectorで設定した
+    /// デフォルトのプレハブ（それも未設定なら球）に戻る。</summary>
+    public void SetPointerVisual(GameObject prefab)
+    {
+      if (_pointerVisual != null) Destroy(_pointerVisual.gameObject);
+
+      if (prefab != null)
+      {
+        var instance = Instantiate(prefab);
         instance.name = "PointerVisual";
         _pointerVisual = instance.transform;
         return; // プレハブ側で見た目・スケールを作り込んである前提なので、半径によるスケール上書きはしない。
       }
 
-      if (_pointerVisual == null)
-      {
-        var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        go.name = "PointerVisual";
-        Destroy(go.GetComponent<Collider>());
-        _pointerVisual = go.transform;
+      var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+      go.name = "PointerVisual";
+      Destroy(go.GetComponent<Collider>());
+      _pointerVisual = go.transform;
 
-        // Sphereプリミティブは半径0.5(直径1)がスケール1に相当するため、
-        // 指定した半径になるようスケールを直径換算で設定する。
-        _pointerVisual.localScale = Vector3.one * (_pointerRadius * 2f);
-      }
+      // Sphereプリミティブは半径0.5(直径1)がスケール1に相当するため、
+      // 指定した半径になるようスケールを直径換算で設定する。
+      _pointerVisual.localScale = Vector3.one * (_pointerRadius * 2f);
     }
+
+    /// <summary><see cref="SetPointerVisual"/>で差し替えたカーソルを、Inspectorで設定した
+    /// デフォルトのプレハブに戻す。ミニゲーム終了時に呼ぶ想定。</summary>
+    public void ResetPointerVisual() => SetPointerVisual(_pointerVisualPrefab);
 
     private void Update()
     {

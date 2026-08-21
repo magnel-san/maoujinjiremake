@@ -30,11 +30,21 @@ namespace DemonLordHR.Minigames
     [Header("UI")]
     [SerializeField] private TMP_Text scoreText;
 
+    [Header("カーソル")]
+    [Tooltip("このミニゲーム中だけ使う専用カーソル（指先アイコン等）。未設定ならデフォルトのままにする。")]
+    [SerializeField] private PointerController pointerController;
+    [SerializeField] private GameObject customPointerVisualPrefab;
+
     public float Score { get; private set; }
     public int CompletionCount { get; private set; }
 
     private int _nextExpectedStep;
     private bool _mistakeMade;
+
+    protected override void OnRulesShown()
+    {
+      if (pointerController != null) pointerController.SetPointerVisual(customPointerVisualPrefab);
+    }
 
     protected override void OnMinigameStart()
     {
@@ -48,6 +58,7 @@ namespace DemonLordHR.Minigames
     protected override void OnMinigameEnd(MinigameResult finalResult)
     {
       if (guideLine != null) guideLine.gameObject.SetActive(false);
+      if (pointerController != null) pointerController.ResetPointerVisual();
     }
 
     /// <summary>シーン上の<see cref="MagicCircleNode"/>が接続判定した際に呼ばれる。</summary>

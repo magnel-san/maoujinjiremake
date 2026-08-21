@@ -6,13 +6,33 @@ using UnityEngine;
 namespace DemonLordHR.Minigames
 {
   /// <summary>
-  /// 【耐熱】仕様4.9：「胸の前でぐるぐるバルブを回す」でマグマを放出する。
-  /// GestureRecognizerのValveSpinは実際に回転した量に比例して発火するため、1発火＝1周分として扱う。
-  /// 回すたびに箱の中へマグマオブジェクトを1つ召喚するが、大量召喚で重くならないよう、
-  /// <see cref="magmaPerPack"/>個たまるたびにそれらをまとめて1つの「ある程度たまった」オブジェクトに置き換える。
+  /// 【耐熱】仕様4.9：ドーナツ状のバルブUIを表示し、手の先（人差し指の先端）でその円周をなぞって
+  /// 実際に回すとマグマを放出する。
+  ///
+  /// 以前は「胸の前でぐるぐる回す」動きを手首の速度ベクトルの向きの変化から推定していたが、
+  /// 手が画面外に出やすい・回転方向の推定がノイズに弱いという弱点があった。
+  /// 代わりに<see cref="PointerController"/>が計算する「指先が指しているワールド座標」を
+  /// <see cref="donutCenter"/>を中心とした角度に変換し、実際に円周上を動いた角度を直接積算する方式にした
+  /// （手の先は常にドーナツの円周上付近を動くはずなので、位置そのものを読む方が自然かつ頑健）。
   /// </summary>
   public class HeatResistMinigame : MinigameBase
   {
+    [Header("ドーナツ型バルブUI")]
+    [Tooltip("ドーナツの中心。指先のワールド座標をこの中心からの角度に変換する（このTransformのXY平面を円盤面とみなす）")]
+    [SerializeField] private Transform donutCenter;
+    [Tooltip("指先の位置に追従して円周上を動くハンドル（カーソル代わりの見た目、任意）")]
+    [SerializeField] private Transform valveHandle;
+    [Tooltip("ハンドルをドーナツの円周からどれだけの距離に置くか")]
+    [SerializeField] private float donutRadius = 1f;
+    [Tooltip("これだけ回したら1回分（マグマ放出1回）とみなす累積角度（度）")]
+    [SerializeField] private float degreesPerFire = 360f;
+    [Tooltip("ポインターが有効でない（指先が検出できていない）場合の回転追跡のリセット猶予")]
+    [SerializeField] private PointerController pointerController;
+
+    [Header("カーソル")]
+    [Tooltip("このミニゲーム中だけ使うバルブハンドル型カーソル。未設定ならデフォルトのままにする。")]
+    [SerializeField] private GameObject customPointerVisualPrefab;
+
     [Header("マグマオブジェクト")]
     [Tooltip("バルブを1周回すたびに召喚する小さいマグマオブジェクト")]
     [SerializeField] private GameObject magmaObjectPrefab;
@@ -35,33 +55,114 @@ namespace DemonLordHR.Minigames
     private readonly List<GameObject> _pendingMagmaObjects = new List<GameObject>();
     private int _packCount;
 
+    private bool _isTracking;
+    private bool _hasPrevAngle;
+    private float _prevAngle;
+    private float _accumulatedDegrees;
+
+    protected override void OnRulesShown()
+    {
+      _isTracking = true;
+      ResetTracking();
+      if (pointerController != null) pointerController.SetPointerVisual(customPointerVisualPrefab);
+    }
+
+    protected override void OnRulesHidden()
+    {
+      _isTracking = false;
+    }
+
     protected override void OnMinigameStart()
     {
       TotalMagma = 0f;
       _packCount = 0;
       ClearPendingMagma();
+      ResetTracking();
+      _isTracking = true;
       UpdateGaugeText();
       UpdateBackground();
     }
 
-    protected override void OnMinigameEnd(MinigameResult finalResult)
+    protected override void OnMinigameTick(float deltaTime)
     {
-      ClearPendingMagma();
+      UpdateValveTracking(isPractice: false);
     }
 
-    protected override void OnGestureForMinigame(GestureType type)
+    protected override void OnMinigameEnd(MinigameResult finalResult)
     {
-      if (type != GestureType.ValveSpin) return;
+      _isTracking = false;
+      ClearPendingMagma();
+      if (pointerController != null) pointerController.ResetPointerVisual();
+    }
 
+    private void Update()
+    {
+      // 練習中（本番タイマー開始前）は、ここでだけ回転を追跡する。
+      // OnMinigameTickは本番の時間カウント中しか呼ばれないため。
+      if (_isTracking && !IsRunning)
+      {
+        UpdateValveTracking(isPractice: true);
+      }
+    }
+
+    protected override void OnGestureForMinigame(GestureType type) { } // このミニゲームはポインター位置で進行するためジェスチャーは使わない
+
+    /// <summary>指先のワールド座標をdonutCenter基準の角度に変換し、実際に動いた角度を積算する。
+    /// 一定角度分回ったら1回分としてfireCallbackを呼び、ハンドルの見た目も円周上へ追従させる。</summary>
+    private void UpdateValveTracking(bool isPractice)
+    {
+      if (pointerController == null || donutCenter == null || !pointerController.IsPointerActive)
+      {
+        _hasPrevAngle = false;
+        return;
+      }
+
+      var local = donutCenter.InverseTransformPoint(pointerController.PointerWorldPosition);
+      var localXY = new Vector2(local.x, local.y);
+      if (localXY.sqrMagnitude < 1e-6f) return; // 中心ぴったりだと角度が定まらないので無視する
+
+      if (valveHandle != null)
+      {
+        var direction = localXY.normalized;
+        valveHandle.position = donutCenter.TransformPoint(direction * donutRadius);
+      }
+
+      var angle = Mathf.Atan2(localXY.y, localXY.x) * Mathf.Rad2Deg;
+      if (!_hasPrevAngle)
+      {
+        _prevAngle = angle;
+        _hasPrevAngle = true;
+        return;
+      }
+
+      _accumulatedDegrees += Mathf.Abs(Mathf.DeltaAngle(_prevAngle, angle));
+      _prevAngle = angle;
+
+      if (_accumulatedDegrees >= Mathf.Max(degreesPerFire, 10f))
+      {
+        _accumulatedDegrees -= Mathf.Max(degreesPerFire, 10f);
+        if (isPractice) SpawnPracticeMagma();
+        else RegisterValveTurn();
+      }
+    }
+
+    private void ResetTracking()
+    {
+      _hasPrevAngle = false;
+      _accumulatedDegrees = 0f;
+    }
+
+    private void RegisterValveTurn()
+    {
       TotalMagma += totalAttackPower;
       SpawnMagmaObject();
       UpdateGaugeText();
     }
 
     /// <summary>練習中：バルブ回しの動作自体は試せるが、マグマは実際には蓄積されない。</summary>
-    protected override void OnPracticeGesture(GestureType type)
+    private void SpawnPracticeMagma()
     {
-      if (type != GestureType.ValveSpin || magmaObjectPrefab == null || magmaBoxCenter == null) return;
+      if (magmaObjectPrefab == null || magmaBoxCenter == null) return;
 
       var offset = Random.insideUnitSphere * magmaBoxRadius;
       offset.y = Mathf.Abs(offset.y);

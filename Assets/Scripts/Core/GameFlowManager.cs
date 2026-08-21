@@ -79,7 +79,8 @@ namespace DemonLordHR.Core
     /// 仮のキャラクターで実行する。個別ミニゲームの動作確認をするための入り口。</summary>
     private IEnumerator RunDebugMinigameOnly()
     {
-      if (_handTrackingController != null) _handTrackingController.HandsVisible = true;
+      // 通常フローのミニゲーム中と同じく、手モデルは邪魔になるので非表示にする。
+      if (_handTrackingController != null) _handTrackingController.HandsVisible = false;
 
       var minigame = _minigames.FirstOrDefault(e => e.genre == _debugGenre)?.minigame;
       if (minigame == null)
@@ -151,6 +152,9 @@ namespace DemonLordHR.Core
       yield return new WaitForSeconds(_settings != null ? _settings.heroIncomingDisplaySeconds : 3f);
 
       CurrentState = GameState.Minigame;
+      // 魔王の手モデルはミニゲーム中は画面上邪魔になるため非表示にする（ジェスチャー認識自体は
+      // MediaPipeの生データを直接見ているため、手モデルを消しても動作に影響しない）。
+      if (_handTrackingController != null) _handTrackingController.HandsVisible = false;
       _defenseSuccessCount = 0;
       _gameOverCount = 0;
 
@@ -182,6 +186,7 @@ namespace DemonLordHR.Core
       }
 
       if (originalPlayerPosition.HasValue) _playerRoot.position = originalPlayerPosition.Value;
+      if (_handTrackingController != null) _handTrackingController.HandsVisible = true;
 
       CurrentState = GameState.FinalBattle;
       if (_finalBattleController != null)

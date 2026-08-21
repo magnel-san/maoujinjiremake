@@ -23,11 +23,21 @@ namespace DemonLordHR.Minigames
     [Header("UI")]
     [SerializeField] private TMP_Text scoreText;
 
+    [Header("カーソル")]
+    [Tooltip("このミニゲーム中だけ使う専用カーソル（虫眼鏡等）。未設定ならデフォルトのままにする。")]
+    [SerializeField] private PointerController pointerController;
+    [SerializeField] private GameObject customPointerVisualPrefab;
+
     public float Score { get; private set; }
     public int BasesFound { get; private set; }
 
     private readonly List<(GameObject instance, Transform point)> _activeBases = new List<(GameObject, Transform)>();
     private float _spawnTimer;
+
+    protected override void OnRulesShown()
+    {
+      if (pointerController != null) pointerController.SetPointerVisual(customPointerVisualPrefab);
+    }
 
     protected override void OnMinigameStart()
     {
@@ -53,6 +63,7 @@ namespace DemonLordHR.Minigames
     protected override void OnMinigameEnd(MinigameResult finalResult)
     {
       ClearBases();
+      if (pointerController != null) pointerController.ResetPointerVisual();
     }
 
     /// <summary>シーン上の<see cref="ScoutBaseTarget"/>が発見判定した際に呼ばれる。</summary>

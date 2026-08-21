@@ -140,10 +140,16 @@ namespace DemonLordHR.Minigames
       instances.Clear();
     }
 
+    /// <summary>飛行・俊足・耐寒のように「メインで操作する1体」をPickRandomAssigned等で選び、
+    /// SpawnRemainingLineupで残りを整列させる方式のジャンルはtrueを返す。trueの場合、
+    /// characterSpawnPointsへの一括召喚(SummonCharacters)を行わない（両方動くと操作キャラが二重に
+    /// 召喚されてしまうため、召喚方式はどちらか一方に統一する）。</summary>
+    protected virtual bool SkipGenericCharacterSummon => false;
+
     public IEnumerator RunAsync()
     {
       WarpPlayerToTarget();
-      SummonCharacters();
+      if (!SkipGenericCharacterSummon) SummonCharacters();
       UpdateAttackPowerText();
 
       yield return ShowRulesAndWaitReady();
@@ -175,7 +181,7 @@ namespace DemonLordHR.Minigames
       UnsubscribeGestures();
       if (timerText != null) timerText.gameObject.SetActive(false);
       OnMinigameEnd(result);
-      DespawnCharacters();
+      if (!SkipGenericCharacterSummon) DespawnCharacters();
 
       OnMinigameFinished?.Invoke(result);
     }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using DemonLordHR.HandTracking;
 using TMPro;
 using UnityEngine;
@@ -22,8 +23,12 @@ namespace DemonLordHR.Minigames
     [SerializeField] private GameObject wavePrefab;
     [Tooltip("波を召喚する位置・向き（未設定ならこのオブジェクトの位置を使う）")]
     [SerializeField] private Transform waveSpawnPoint;
-    [Tooltip("波オブジェクトが自動的に消えるまでの秒数")]
+    [Tooltip("波オブジェクトが自動的に消えるまでの秒数（勇者に当たらなかった場合の保険）")]
     [SerializeField] private float waveLifetime = 2f;
+    [Tooltip("同時に存在できる波オブジェクトの最大数。連続発火で大量発生するのを防ぐ安全弁。")]
+    [SerializeField] private int maxConcurrentWaves = 3;
+    [Tooltip("波が前進する速度(m/s)")]
+    [SerializeField] private float waveSpeed = 5f;
 
     [Header("UI")]
     [Tooltip("ゲームオーバーになるまでの距離を示すスクロールバー。ハンドルに勇者アイコンを設定する想定。")]
@@ -33,6 +38,8 @@ namespace DemonLordHR.Minigames
 
     public float TotalDamage { get; private set; }
     public float HeroProximity01 { get; private set; } // 0=遠い, 1=目前
+
+    private readonly List<GameObject> _activeWaves = new List<GameObject>();
 
     protected override void OnMinigameStart()
     {
@@ -55,26 +62,42 @@ namespace DemonLordHR.Minigames
     protected override void OnGestureForMinigame(GestureType type)
     {
       if (type != GestureType.SwipeSideways) return;
+      SpawnWave(isPractice: false);
+    }
 
-      SpawnWave();
+    /// <summary>ルール説明中の練習用：波は前進して飛んでいくが、勇者に当たってもダメージ・接近度には影響させない。</summary>
+    protected override void OnPracticeGesture(GestureType type)
+    {
+      if (type != GestureType.SwipeSideways) return;
+      SpawnWave(isPractice: true);
+    }
+
+    /// <summary>波が実際に勇者へ命中した瞬間に呼ばれる（WaveProjectile経由）。</summary>
+    private void HandleWaveHit()
+    {
       TotalDamage += totalAttackPower;
       HeroProximity01 = Mathf.Clamp01(HeroProximity01 - _heroPushBackPerHit);
       UpdateHeroVisual();
     }
 
-    /// <summary>ルール説明中の練習用：波は出すが、ダメージ・接近度には影響させない。</summary>
-    protected override void OnPracticeGesture(GestureType type)
-    {
-      if (type != GestureType.SwipeSideways) return;
-      SpawnWave();
-    }
-
-    private void SpawnWave()
+    private void SpawnWave(bool isPractice)
     {
       if (wavePrefab == null) return;
+
+      _activeWaves.RemoveAll(w => w == null);
+      if (_activeWaves.Count >= Mathf.Max(maxConcurrentWaves, 1)) return; // 同時出現数の上限に達していたら抑制する
+
       var point = waveSpawnPoint != null ? waveSpawnPoint : transform;
       var instance = Instantiate(wavePrefab, point.position, point.rotation);
-      Destroy(instance, Mathf.Max(waveLifetime, 0.01f));
+      _activeWaves.Add(instance);
+      Destroy(instance, Mathf.Max(waveLifetime, 0.01f)); // 当たらなかった場合の保険としての自動消滅
+
+      var projectile = instance.GetComponent<WaveProjectile>();
+      if (projectile != null)
+      {
+        if (isPractice) projectile.Initialize(waveSpeed, null, null);
+        else projectile.Initialize(waveSpeed, heroTransform, HandleWaveHit);
+      }
     }
 
     private void UpdateHeroVisual()

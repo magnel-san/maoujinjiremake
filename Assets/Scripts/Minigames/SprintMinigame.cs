@@ -39,6 +39,10 @@ namespace DemonLordHR.Minigames
 
     public float DistanceTravelled { get; private set; }
 
+    // 走者＋残りの整列を自前でスポーンするため、基底クラスの一括召喚は使わない
+    // （両方動くと走者が二重に召喚されてしまう）。
+    protected override bool SkipGenericCharacterSummon => true;
+
     protected override void OnRulesShown()
     {
       _runner = PickRandomAssigned();

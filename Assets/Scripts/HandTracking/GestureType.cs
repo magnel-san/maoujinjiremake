@@ -15,12 +15,10 @@ namespace DemonLordHR.HandTracking
     HammerSwingDown,
     /// <summary>両拳を交互に突き出す（パンチ） → 【戦闘】攻撃／最終決戦連打</summary>
     AlternatingPunch,
-    /// <summary>右から左に腕を振る → 【耐寒】左移動</summary>
-    SwipeRightToLeft,
-    /// <summary>左から右に腕を振る → 【耐寒】右移動</summary>
-    SwipeLeftToRight,
-    /// <summary>胸の前でぐるぐるバルブを回す → 【耐熱】マグマ放出</summary>
-    ValveSpin,
+    /// <summary>右腕を横方向に伸ばす（キープ） → 【耐寒】右移動</summary>
+    RightArmSidewaysExtend,
+    /// <summary>左腕を横方向に伸ばす（キープ） → 【耐寒】左移動</summary>
+    LeftArmSidewaysExtend,
     /// <summary>両手を前で合わせる → 【知性】魔法陣起動</summary>
     HandsTogether,
   }

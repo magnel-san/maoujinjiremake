@@ -7,7 +7,9 @@ using UnityEngine;
 namespace DemonLordHR.Minigames
 {
   /// <summary>
-  /// 【耐寒】仕様4.8：3レーン上で「右→左」「左→右」の腕振りでレーン移動し、飛んでくる氷塊を回避する。
+  /// 【耐寒】仕様4.8：3レーン上で「右腕を横に伸ばす→右移動」「左腕を横に伸ばす→左移動」でレーン移動し、
+  /// 飛んでくる氷塊を回避する。左右どちらの腕を伸ばしたかで移動方向が決まるため、
+  /// スワイプの速度方向に頼る方式と違って両方向が同時に誤発火することがない。
   /// 採用キャラは中央レーンに配置してスタートする。被弾した場合は即ゲームオーバーにはせず、
   /// 数秒のスタン（その間はレーン移動できない）というペナルティにしている。
   /// </summary>
@@ -52,6 +54,10 @@ namespace DemonLordHR.Minigames
     public int CurrentLane { get; private set; } = 1; // 0=左,1=中央,2=右
     public float Score { get; private set; }
     public bool IsStunned => _stunTimer > 0f;
+
+    // 防御役＋残りの整列を自前でスポーンするため、基底クラスの一括召喚は使わない
+    // （両方動くと防御役が二重に召喚されてしまう）。
+    protected override bool SkipGenericCharacterSummon => true;
 
     protected override void OnRulesShown()
     {
@@ -113,11 +119,11 @@ namespace DemonLordHR.Minigames
 
       switch (type)
       {
-        case GestureType.SwipeRightToLeft:
+        case GestureType.LeftArmSidewaysExtend:
           CurrentLane = Mathf.Max(0, CurrentLane - 1);
           UpdateDefenderPosition();
           break;
-        case GestureType.SwipeLeftToRight:
+        case GestureType.RightArmSidewaysExtend:
           CurrentLane = Mathf.Min(LaneCount - 1, CurrentLane + 1);
           UpdateDefenderPosition();
           break;
@@ -129,11 +135,11 @@ namespace DemonLordHR.Minigames
     {
       switch (type)
       {
-        case GestureType.SwipeRightToLeft:
+        case GestureType.LeftArmSidewaysExtend:
           CurrentLane = Mathf.Max(0, CurrentLane - 1);
           UpdateDefenderPosition();
           break;
-        case GestureType.SwipeLeftToRight:
+        case GestureType.RightArmSidewaysExtend:
           CurrentLane = Mathf.Min(LaneCount - 1, CurrentLane + 1);
           UpdateDefenderPosition();
           break;

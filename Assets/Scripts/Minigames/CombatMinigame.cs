@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using DemonLordHR.HandTracking;
 using TMPro;
 using UnityEngine;
@@ -26,6 +27,8 @@ namespace DemonLordHR.Minigames
     [Tooltip("こぶしを召喚する位置・向き（未設定ならこのオブジェクトの位置を使う）")]
     [SerializeField] private Transform fistSpawnPoint;
     [SerializeField] private float fistLifetime = 1.5f;
+    [Tooltip("同時に存在できるこぶしオブジェクトの最大数。連続発火で大量発生するのを防ぐ安全弁。")]
+    [SerializeField] private int maxConcurrentFists = 3;
 
     [Header("UI")]
     [Tooltip("ゲームオーバーになるまでの距離を示すスクロールバー。ハンドルに勇者アイコンを設定する想定。")]
@@ -35,6 +38,8 @@ namespace DemonLordHR.Minigames
 
     public float TotalDamage { get; private set; }
     public float HeroProximity01 { get; private set; }
+
+    private readonly List<GameObject> _activeFists = new List<GameObject>();
 
     protected override void OnMinigameStart()
     {
@@ -74,8 +79,13 @@ namespace DemonLordHR.Minigames
     private void SpawnFist()
     {
       if (fistPrefab == null) return;
+
+      _activeFists.RemoveAll(f => f == null);
+      if (_activeFists.Count >= Mathf.Max(maxConcurrentFists, 1)) return; // 同時出現数の上限に達していたら抑制する
+
       var point = fistSpawnPoint != null ? fistSpawnPoint : transform;
       var instance = Instantiate(fistPrefab, point.position, point.rotation);
+      _activeFists.Add(instance);
       Destroy(instance, Mathf.Max(fistLifetime, 0.01f));
     }
 
