@@ -488,6 +488,7 @@ MonoBehaviour:
   - {fileID: 801540960}
   playerRoot: {fileID: 694815937}
   warpTarget: {fileID: 713395919}
+  applyWarpRotation: 0
   attackPowerText: {fileID: 1255584523}
   ruleImageRoot: {fileID: 1612396988}
   timerText: {fileID: 1407675263}
@@ -2401,6 +2402,7 @@ MonoBehaviour:
   - {fileID: 1519867956}
   playerRoot: {fileID: 694815937}
   warpTarget: {fileID: 1313769139}
+  applyWarpRotation: 0
   attackPowerText: {fileID: 814691582}
   ruleImageRoot: {fileID: 659014301}
   timerText: {fileID: 522399564}
@@ -3709,6 +3711,7 @@ MonoBehaviour:
   - {fileID: 1681296008}
   playerRoot: {fileID: 694815937}
   warpTarget: {fileID: 327435778}
+  applyWarpRotation: 0
   attackPowerText: {fileID: 908843740}
   ruleImageRoot: {fileID: 1033521123}
   timerText: {fileID: 261805727}
@@ -5051,6 +5054,7 @@ MonoBehaviour:
   - {fileID: 34875736}
   playerRoot: {fileID: 694815937}
   warpTarget: {fileID: 1289545030}
+  applyWarpRotation: 0
   attackPowerText: {fileID: 1427167140}
   ruleImageRoot: {fileID: 361418258}
   timerText: {fileID: 1997794419}
@@ -5766,6 +5770,7 @@ MonoBehaviour:
   - {fileID: 2097415092}
   playerRoot: {fileID: 694815937}
   warpTarget: {fileID: 1447577308}
+  applyWarpRotation: 0
   attackPowerText: {fileID: 281343548}
   ruleImageRoot: {fileID: 1739007608}
   timerText: {fileID: 710196364}
@@ -6045,8 +6050,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 650117585}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -180}
+  m_LocalRotation: {x: -0.042199414, y: -0.7058465, z: -0.042199414, w: 0.7058464}
+  m_LocalPosition: {x: 250, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6891,6 +6896,7 @@ MonoBehaviour:
   - {fileID: 1983786526}
   playerRoot: {fileID: 694815937}
   warpTarget: {fileID: 1427779795}
+  applyWarpRotation: 0
   attackPowerText: {fileID: 1973049013}
   ruleImageRoot: {fileID: 1100807835}
   timerText: {fileID: 836971586}
@@ -7380,6 +7386,7 @@ MonoBehaviour:
   - {fileID: 676087}
   playerRoot: {fileID: 694815937}
   warpTarget: {fileID: 527159119}
+  applyWarpRotation: 0
   attackPowerText: {fileID: 444673882}
   ruleImageRoot: {fileID: 160329728}
   timerText: {fileID: 2057003370}
@@ -9864,6 +9871,7 @@ MonoBehaviour:
   - {fileID: 442891998}
   playerRoot: {fileID: 694815937}
   warpTarget: {fileID: 583089864}
+  applyWarpRotation: 0
   attackPowerText: {fileID: 1346195748}
   ruleImageRoot: {fileID: 1362419931}
   timerText: {fileID: 2010950010}
@@ -13417,6 +13425,7 @@ MonoBehaviour:
   - {fileID: 1909588424}
   playerRoot: {fileID: 694815937}
   warpTarget: {fileID: 1590130404}
+  applyWarpRotation: 0
   attackPowerText: {fileID: 218907185}
   ruleImageRoot: {fileID: 356407138}
   timerText: {fileID: 1911619112}
@@ -15784,7 +15793,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1744767033}
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
+  m_LocalRotation: {x: -0, y: 1, z: -0, w: -0.00000004371139}
   m_LocalPosition: {x: 0, y: 0, z: 20}
   m_LocalScale: {x: 0.10692, y: 0.10692, z: 0.10692}
   m_ConstrainProportionsScale: 0
@@ -16631,7 +16640,7 @@ MonoBehaviour:
   - genre: 8
     minigame: {fileID: 766603948}
   _debugStartFromMinigame: 1
-  _debugGenre: 3
+  _debugGenre: 1
   _debugHiredCharacters:
   - {fileID: 11400000, guid: 996257ea3b2383c4f9a97843dfc3ffc9, type: 2}
   - {fileID: 11400000, guid: dbe03db9ac2d6d845bfe25302325abc3, type: 2}

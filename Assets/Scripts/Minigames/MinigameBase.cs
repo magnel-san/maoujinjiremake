@@ -53,8 +53,12 @@ namespace DemonLordHR.Minigames
     [Tooltip("このミニゲームの場所へワープさせるプレイヤー本体（Main Camera・WorldUICameraの親）。" +
       "未設定ならワープしない。")]
     [SerializeField] protected Transform playerRoot;
-    [Tooltip("ワープ先の位置。位置だけを使い、向き(回転)はplayerRootの現在の向きのまま変更しない。")]
+    [Tooltip("ワープ先の位置。既定では位置だけを使い、向き(回転)はplayerRootの現在の向きのまま変更しない" +
+      "（applyWarpRotationがtrueの場合のみ、向きもこのTransformに合わせる）。")]
     [SerializeField] protected Transform warpTarget;
+    [Tooltip("trueの場合、ワープ時にプレイヤーの向きもwarpTargetの向きに合わせる（横視点にしたい飛行等で使う）。" +
+      "終了時に元の向きへ自動的に戻す。falseなら従来通り向きは変更しない。")]
+    [SerializeField] protected bool applyWarpRotation;
 
     [Header("UI")]
     [Tooltip("編成（このジャンルで採用したキャラ）の合計攻撃力を表示するテキスト")]
@@ -182,6 +186,7 @@ namespace DemonLordHR.Minigames
       if (timerText != null) timerText.gameObject.SetActive(false);
       OnMinigameEnd(result);
       if (!SkipGenericCharacterSummon) DespawnCharacters();
+      RestorePlayerRotation();
 
       OnMinigameFinished?.Invoke(result);
     }
@@ -225,11 +230,31 @@ namespace DemonLordHR.Minigames
       _summonedInstances.Clear();
     }
 
-    /// <summary>プレイヤー本体を、位置だけそのミニゲームの場所へ瞬間移動させる。向きは変えない。</summary>
+    private Quaternion _originalPlayerRotation;
+    private bool _rotationOverridden;
+
+    /// <summary>プレイヤー本体をそのミニゲームの場所へ瞬間移動させる。既定では位置だけを変更し、向きは
+    /// 変えない。applyWarpRotationがtrueの場合はwarpTargetの向きにも合わせる（元の向きは覚えておき、
+    /// ミニゲーム終了時にRestorePlayerRotationで戻す）。</summary>
     private void WarpPlayerToTarget()
     {
       if (playerRoot == null || warpTarget == null) return;
       playerRoot.position = warpTarget.position;
+
+      if (applyWarpRotation)
+      {
+        _originalPlayerRotation = playerRoot.rotation;
+        playerRoot.rotation = warpTarget.rotation;
+        _rotationOverridden = true;
+      }
+    }
+
+    /// <summary>WarpPlayerToTargetでapplyWarpRotationにより変更した向きを元へ戻す。</summary>
+    private void RestorePlayerRotation()
+    {
+      if (!_rotationOverridden || playerRoot == null) return;
+      playerRoot.rotation = _originalPlayerRotation;
+      _rotationOverridden = false;
     }
 
     private IEnumerator ShowRulesAndWaitReady()
