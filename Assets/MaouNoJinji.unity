@@ -978,6 +978,10 @@ MonoBehaviour:
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
   nodeIndex: 0
+  _renderer: {fileID: 0}
+  _idleColor: {r: 1, g: 1, b: 1, a: 1}
+  _hoverColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  _connectedColor: {r: 0, g: 1, b: 1, a: 1}
 --- !u!65 &142272013
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3268,6 +3272,10 @@ MonoBehaviour:
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
   nodeIndex: 0
+  _renderer: {fileID: 0}
+  _idleColor: {r: 1, g: 1, b: 1, a: 1}
+  _hoverColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  _connectedColor: {r: 0, g: 1, b: 1, a: 1}
 --- !u!65 &311483164
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -5072,7 +5080,7 @@ MonoBehaviour:
   - {fileID: 1205479171}
   iceSpeed: 30
   iceSpawnInterval: 1.2
-  judgeZ: 0
+  despawnDistancePastLane: 5
   stunSeconds: 2
   scoreText: {fileID: 224887727}
   stunIndicator: {fileID: 752232318}
@@ -6050,7 +6058,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 650117585}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.042199414, y: -0.7058465, z: -0.042199414, w: 0.7058464}
+  m_LocalRotation: {x: -0, y: -0.7071068, z: -0, w: 0.7071068}
   m_LocalPosition: {x: 250, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -6249,15 +6257,17 @@ MonoBehaviour:
   _touchDistanceThreshold: 0.04
   _handsTogetherHoldSeconds: 0.3
   _offHandSuppressionRatio: 1.3
+  _punchVerticalMinAngle: 45
   _punchWindowSeconds: 0.3
   _punchAngleSpeedThreshold: 250
-  _punchMinAngleIncrease: 35
+  _punchMinAngleDecrease: 35
   _swingExitRatio: 0.35
-  _poseSwingSpeedThreshold: 1
+  _wingFlapSpeedThreshold: 1
+  _armSwingSpeedThreshold: 1
+  _hammerSpeedThreshold: 1
   _poseHammerRaisedViewportY: 0.55
-  _sidewaysExtendMinAngle: 150
-  _sidewaysLevelTolerance: 0.15
-  _sidewaysHoldSeconds: 0.15
+  _hammerHandsTogetherMaxDistance: 0.15
+  _fistHoldSeconds: 0.15
 --- !u!114 &681877492
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8629,6 +8639,10 @@ MonoBehaviour:
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
   nodeIndex: 0
+  _renderer: {fileID: 0}
+  _idleColor: {r: 1, g: 1, b: 1, a: 1}
+  _hoverColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  _connectedColor: {r: 0, g: 1, b: 1, a: 1}
 --- !u!65 &967927366
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -8983,7 +8997,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 986658226}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: -0, y: 1, z: -0, w: -0.00000004371139}
   m_LocalPosition: {x: 0, y: 0, z: 50}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -9889,7 +9903,7 @@ MonoBehaviour:
   obstacleMaterial: {fileID: 2100000, guid: 5071c0d644c3b23408447d8cbfd28dc6, type: 2}
   obstacleSpawnPoint: {fileID: 650117586}
   obstacleSpeed: 40
-  obstacleSpawnInterval: 2
+  obstacleSpawnInterval: 4
   gapCenterMinY: -40
   gapCenterMaxY: 50
   gapMargin: 20
@@ -11220,6 +11234,10 @@ MonoBehaviour:
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
   nodeIndex: 0
+  _renderer: {fileID: 0}
+  _idleColor: {r: 1, g: 1, b: 1, a: 1}
+  _hoverColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  _connectedColor: {r: 0, g: 1, b: 1, a: 1}
 --- !u!65 &1300575738
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -12237,6 +12255,10 @@ MonoBehaviour:
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
   nodeIndex: 0
+  _renderer: {fileID: 0}
+  _idleColor: {r: 1, g: 1, b: 1, a: 1}
+  _hoverColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  _connectedColor: {r: 0, g: 1, b: 1, a: 1}
 --- !u!65 &1370060131
 BoxCollider:
   m_ObjectHideFlags: 0

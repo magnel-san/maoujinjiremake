@@ -70,17 +70,20 @@ namespace DemonLordHR.HandTracking
       "抑制倍率。動かした方の手の速さが、逆の手のこの倍率を超えていないと新規の立ち上がりを開始しない。")]
     [SerializeField, Range(1f, 3f)] private float _offHandSuppressionRatio = 1.3f;
 
-    [Header("パンチ（右手突き出し／両拳交互）：肘の伸展角度で判定")]
-    [Tooltip("肘の角度増加を測る時間窓（秒）")]
+    [Header("パンチ（両拳交互）：前腕が垂直→水平になる動きで判定")]
+    [Tooltip("前腕（肘→手首）が画面内でどれだけ「垂直寄り」なら振りかぶり中とみなすか（度、0=水平 90=垂直）。" +
+      "パンチの前は腕を曲げて拳が胸・肩の近くにあり、前腕はおおむね垂直に近い状態になる想定。")]
+    [SerializeField] private float _punchVerticalMinAngle = 45f;
+    [Tooltip("前腕の垂直→水平方向への変化を測る時間窓（秒）")]
     [SerializeField] private float _punchWindowSeconds = 0.3f;
-    [Tooltip("パンチとみなす、肘が伸びる速さ（度/秒）。数値を上げるほど、より素早く突き出さないと発火しなくなる。" +
+    [Tooltip("パンチとみなす、前腕が水平に近づく速さ（度/秒）。数値を上げるほど、より素早く突き出さないと発火しなくなる。" +
       "反応しない場合はまずこの値を下げて確認する。" +
       "手首の奥行き(Z)や見た目のサイズはMediaPipeの推定誤差やプレイヤーの座る距離に影響されるため使わず、" +
-      "肩-肘-手首のなす角（距離に依存しないスケール不変な特徴量）の変化速度で判定する。")]
+      "前腕の向き（画面内の角度、距離に依存しないスケール不変な特徴量）の変化速度で判定する。")]
     [SerializeField] private float _punchAngleSpeedThreshold = 250f;
-    [Tooltip("パンチとみなす、時間窓内での肘の角度の最小増加量（度）。" +
-      "速度だけでなく実際に大きく腕を伸ばしたことも要求することで、小さな動きでの誤発火を防ぐ。")]
-    [SerializeField] private float _punchMinAngleIncrease = 35f;
+    [Tooltip("パンチとみなす、時間窓内での前腕の角度の最小減少量（度）。垂直から水平へどれだけ変化したかを" +
+      "要求することで、小さな動きでの誤発火を防ぐ。")]
+    [SerializeField] private float _punchMinAngleDecrease = 35f;
 
     [Header("スイング系ジェスチャー共通（速度ピーク検出）")]
     [Tooltip("スワイプ（遊泳）に共通の再アーム条件。各しきい値に対する比率（0〜1）。" +
@@ -91,19 +94,19 @@ namespace DemonLordHR.HandTracking
     [Header("上腕ベースの判定（PoseTrackingController、画面比率速度）：翼ばたき・両腕振り・ハンマー")]
     [Tooltip("肩・肘まで映る上腕トラッキング側の手首位置（画面内比率）を使うことで、" +
       "手だけを追う方式より振りの大きいジェスチャーで画面外に出てロストしにくくする。" +
-      "翼ばたき・両腕振り・ハンマーに共通の「速い」とみなす閾値（画面高さ比/秒）。")]
-    [SerializeField] private float _poseSwingSpeedThreshold = 1.0f;
+      "3つとも動きの質が違うため、それぞれ個別の閾値にしている（反応しない場合はまずこの値を下げて確認する）。")]
+    [SerializeField] private float _wingFlapSpeedThreshold = 1.0f;
+    [SerializeField] private float _armSwingSpeedThreshold = 1.0f;
+    [SerializeField] private float _hammerSpeedThreshold = 1.0f;
     [Tooltip("ハンマーの「振り上げ済み」とみなす、上腕トラッキング側の画面内の高さ（0=下端 1=上端）")]
     [SerializeField, Range(0f, 1f)] private float _poseHammerRaisedViewportY = 0.55f;
+    [Tooltip("労働のハンマーは両手を合わせて振り下ろす動作のため、両手首がこの距離以内（画面内比率）に" +
+      "近づいている間だけ「両手を合わせている」とみなす。")]
+    [SerializeField] private float _hammerHandsTogetherMaxDistance = 0.15f;
 
-    [Header("耐寒（腕を横方向に伸ばしてレーン移動）")]
-    [Tooltip("肘が伸びている（横に突き出している）とみなす最小角度（度）。反応しない場合はまずこの値を下げて確認する。")]
-    [SerializeField] private float _sidewaysExtendMinAngle = 130f;
-    [Tooltip("手首と肩の高さの差がこの範囲内なら「横に伸ばしている」とみなす（画面内比率、0〜1）。" +
-      "反応しない場合はこの値を上げて確認する。")]
-    [SerializeField, Range(0f, 0.5f)] private float _sidewaysLevelTolerance = 0.22f;
-    [Tooltip("誤発火防止のため、この秒数だけ伸ばした状態を維持したら発火する")]
-    [SerializeField] private float _sidewaysHoldSeconds = 0.15f;
+    [Header("耐寒（左右の手を握って左右移動）")]
+    [Tooltip("拳（グー）とみなす保持秒数。誤発火防止のため、この秒数だけ握った状態を維持したら発火する")]
+    [SerializeField] private float _fistHoldSeconds = 0.15f;
 
     public event Action<GestureType> OnGestureDetected;
 
@@ -129,10 +132,10 @@ namespace DemonLordHR.HandTracking
     private float _handsTogetherTimer;
     private bool _handsTogetherArmed = true;
 
-    private float _rightLaneSwitchTimer;
-    private bool _rightLaneSwitchArmed = true;
-    private float _leftLaneSwitchTimer;
-    private bool _leftLaneSwitchArmed = true;
+    private float _rightFistTimer;
+    private bool _rightFistArmed = true;
+    private float _leftFistTimer;
+    private bool _leftFistArmed = true;
 
     private readonly AngleTrace _rightElbowTrace = new AngleTrace();
     private readonly AngleTrace _leftElbowTrace = new AngleTrace();
@@ -141,8 +144,7 @@ namespace DemonLordHR.HandTracking
     private SwingDetector _leftSwipeDetector;
     private SwingDetector _wingFlapDetector;
     private SwingDetector _armSwingDetector;
-    private SwingDetector _rightHammerDetector;
-    private SwingDetector _leftHammerDetector;
+    private SwingDetector _hammerDetector;
     private SwingDetector _rightPunchDetector;
     private SwingDetector _leftPunchDetector;
 
@@ -159,10 +161,9 @@ namespace DemonLordHR.HandTracking
 
       _rightSwipeDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
       _leftSwipeDetector = new SwingDetector(_fastVelocityThreshold, _swingExitRatio);
-      _wingFlapDetector = new SwingDetector(_poseSwingSpeedThreshold, _swingExitRatio);
-      _armSwingDetector = new SwingDetector(_poseSwingSpeedThreshold, _swingExitRatio);
-      _rightHammerDetector = new SwingDetector(_poseSwingSpeedThreshold, _swingExitRatio);
-      _leftHammerDetector = new SwingDetector(_poseSwingSpeedThreshold, _swingExitRatio);
+      _wingFlapDetector = new SwingDetector(_wingFlapSpeedThreshold, _swingExitRatio);
+      _armSwingDetector = new SwingDetector(_armSwingSpeedThreshold, _swingExitRatio);
+      _hammerDetector = new SwingDetector(_hammerSpeedThreshold, _swingExitRatio);
       _rightPunchDetector = new SwingDetector(_punchAngleSpeedThreshold, _swingExitRatio);
       _leftPunchDetector = new SwingDetector(_punchAngleSpeedThreshold, _swingExitRatio);
     }
@@ -374,10 +375,12 @@ namespace DemonLordHR.HandTracking
       public bool rightArmValid;
       public float rightElbowAngle;
       public Vector2 rightWristViewport;
+      public Vector2 rightElbowViewport;
       public Vector2 rightShoulderViewport;
       public bool leftArmValid;
       public float leftElbowAngle;
       public Vector2 leftWristViewport;
+      public Vector2 leftElbowViewport;
       public Vector2 leftShoulderViewport;
       public float timestamp;
 
@@ -463,17 +466,16 @@ namespace DemonLordHR.HandTracking
       _prevPose = _pose;
       _pose = BuildPoseFrame(result);
 
-      if (_pose.rightArmValid) _rightElbowTrace.Add(_pose.rightElbowAngle, _pose.timestamp, _punchWindowSeconds);
+      if (_pose.rightArmValid) _rightElbowTrace.Add(ForearmAngleFromHorizontal(_pose.rightElbowViewport, _pose.rightWristViewport), _pose.timestamp, _punchWindowSeconds);
       else { _rightElbowTrace.Clear(); _rightPunchDetector.Reset(); }
 
-      if (_pose.leftArmValid) _leftElbowTrace.Add(_pose.leftElbowAngle, _pose.timestamp, _punchWindowSeconds);
+      if (_pose.leftArmValid) _leftElbowTrace.Add(ForearmAngleFromHorizontal(_pose.leftElbowViewport, _pose.leftWristViewport), _pose.timestamp, _punchWindowSeconds);
       else { _leftElbowTrace.Clear(); _leftPunchDetector.Reset(); }
 
       DetectAlternatingPunch();
       DetectWingFlapPose();
       DetectArmSwingBothPose();
       DetectHammerSwingDownPose();
-      DetectSidewaysArmExtend();
     }
 
     private float PoseDt() => Mathf.Max(_pose.timestamp - _prevPose.timestamp, 0.0001f);
@@ -499,6 +501,7 @@ namespace DemonLordHR.HandTracking
         frame.rightWristViewport = new Vector2(
           _rightWristViewportXFilter.Filter(rightWristRaw.x, time),
           _rightWristViewportYFilter.Filter(rightWristRaw.y, time));
+        frame.rightElbowViewport = ToPoseViewport(lm[13]);
         frame.rightShoulderViewport = ToPoseViewport(lm[11]);
       }
       if (TryComputeElbowAngle(lm, 12, 14, 16, out var rawLeft))
@@ -509,6 +512,7 @@ namespace DemonLordHR.HandTracking
         frame.leftWristViewport = new Vector2(
           _leftWristViewportXFilter.Filter(leftWristRaw.x, time),
           _leftWristViewportYFilter.Filter(leftWristRaw.y, time));
+        frame.leftElbowViewport = ToPoseViewport(lm[14]);
         frame.leftShoulderViewport = ToPoseViewport(lm[12]);
       }
 
@@ -587,7 +591,8 @@ namespace DemonLordHR.HandTracking
       var dt = Mathf.Max(Time.deltaTime, 0.0001f);
 
       DetectHorizontalSwipes(dt);
-      // 翼ばたき・両腕振り・ハンマー・パンチ・耐寒の腕横伸ばしは、手だけより振りの大きい動きに強い
+      DetectFistHold(dt);
+      // 翼ばたき・両腕振り・ハンマー・パンチは、手だけより振りの大きい動きに強い
       // 上腕トラッキング(PoseTrackingController)側、HandlePoseResultから駆動する。
       DetectHandsTogether(dt);
     }
@@ -660,8 +665,9 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    // 両腕を振る（俊足、上腕ベース）：前後(Z)方向はMediaPipeが苦手とする軸のため使わず、
-    // 上腕トラッキング側の手首位置が画面内でどれだけ速く動いたか（X/Y合成）で判定する。
+    // 両腕を振る（俊足、上腕ベース）：ランニングの腕振りは左右が逆位相（片方が上がる時もう片方は下がる）
+    // で動くため、翼ばたき（同位相）とは逆に、両手首の縦方向速度の符号が逆の場合だけ受け付ける。
+    // 前後(Z)方向はMediaPipeが苦手とする軸のため使わず、上下方向の速度だけを見る。
     private void DetectArmSwingBothPose()
     {
       if (!_pose.rightArmValid || !_pose.leftArmValid || !_prevPose.rightArmValid || !_prevPose.leftArmValid)
@@ -671,9 +677,10 @@ namespace DemonLordHR.HandTracking
       }
 
       var dt = PoseDt();
-      var rv = (_pose.rightWristViewport - _prevPose.rightWristViewport) / dt;
-      var lv = (_pose.leftWristViewport - _prevPose.leftWristViewport) / dt;
-      var feature = Mathf.Min(rv.magnitude, lv.magnitude);
+      var rv = (_pose.rightWristViewport.y - _prevPose.rightWristViewport.y) / dt;
+      var lv = (_pose.leftWristViewport.y - _prevPose.leftWristViewport.y) / dt;
+      var opposite = Mathf.Sign(lv) != Mathf.Sign(rv);
+      var feature = opposite ? Mathf.Min(Mathf.Abs(lv), Mathf.Abs(rv)) : 0f;
 
       if (_armSwingDetector.Update(feature))
       {
@@ -681,91 +688,81 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    // 腕を振り下ろす（労働・ハンマー打ち、上腕ベース）：振り上げていた手首が急速に下降し、
-    // 下降速度がピークを迎えた瞬間を1回とする。片手操作のため、逆の手にたまたま判定を
-    // 奪われないよう、明確にこちらの手の方が下降が速い場合だけ新規の立ち上がりを許可する。
+    // 腕を振り下ろす（労働・ハンマー打ち、上腕ベース）：両手を合わせてハンマーを持つイメージの動作のため、
+    // 片手ずつではなく両手首の中点を1つの「手の位置」として扱う。振り上げていた中点位置が急速に下降し、
+    // 下降速度がピークを迎えた瞬間を1回とする。両手が離れている間（合わせていない間）は受け付けない。
     private void DetectHammerSwingDownPose()
     {
-      var dt = PoseDt();
-      var rightOtherVel = _pose.leftArmValid && _prevPose.leftArmValid ? (_pose.leftWristViewport - _prevPose.leftWristViewport) / dt : Vector2.zero;
-      var leftOtherVel = _pose.rightArmValid && _prevPose.rightArmValid ? (_pose.rightWristViewport - _prevPose.rightWristViewport) / dt : Vector2.zero;
-
-      EvaluateHammerPose(_pose.rightArmValid, _prevPose.rightArmValid, _pose.rightWristViewport, _prevPose.rightWristViewport, rightOtherVel.y, dt, _rightHammerDetector);
-      EvaluateHammerPose(_pose.leftArmValid, _prevPose.leftArmValid, _pose.leftWristViewport, _prevPose.leftWristViewport, leftOtherVel.y, dt, _leftHammerDetector);
-    }
-
-    private void EvaluateHammerPose(bool armValid, bool prevArmValid, Vector2 wrist, Vector2 prevWrist, float otherVelY, float dt, SwingDetector detector)
-    {
-      if (!armValid || !prevArmValid)
+      if (!_pose.rightArmValid || !_pose.leftArmValid || !_prevPose.rightArmValid || !_prevPose.leftArmValid)
       {
-        detector.Reset();
+        _hammerDetector.Reset();
         return;
       }
+
+      var dt = PoseDt();
+      var wrist = (_pose.rightWristViewport + _pose.leftWristViewport) * 0.5f;
+      var prevWrist = (_prevPose.rightWristViewport + _prevPose.leftWristViewport) * 0.5f;
 
       var velY = (wrist.y - prevWrist.y) / dt;
       var velX = (wrist.x - prevWrist.x) / dt;
       var downwardSpeed = Mathf.Max(-velY, 0f);
-      var otherDownwardSpeed = Mathf.Max(-otherVelY, 0f);
       var wasRaised = prevWrist.y > _poseHammerRaisedViewportY;
       // 縦方向優勢（横方向より下向きが勝っている）動きだけをハンマーとして受け付ける。
       var dominantlyVertical = Mathf.Abs(velY) >= Mathf.Abs(velX);
-      var notStolenByOtherHand = downwardSpeed > otherDownwardSpeed * _offHandSuppressionRatio;
-      var canEnter = wasRaised && dominantlyVertical && notStolenByOtherHand;
+      var handsTogether = Vector2.Distance(_prevPose.rightWristViewport, _prevPose.leftWristViewport) <= _hammerHandsTogetherMaxDistance;
+      var canEnter = wasRaised && dominantlyVertical && handsTogether;
 
-      if (detector.Update(downwardSpeed, canEnter))
+      if (_hammerDetector.Update(downwardSpeed, canEnter))
       {
         TryFire(GestureType.HammerSwingDown);
       }
     }
 
-    // 耐寒：腕を横方向に伸ばしてキープするとレーン移動。左右の腕をそれぞれ独立に判定するため、
-    // 「どちらに手を動かしたか」という速度方向に頼るスワイプ方式と違い、動かした腕自体で
-    // 移動方向が決まり、誤って逆方向も同時に発火することがない。
-    private void DetectSidewaysArmExtend()
+    // 耐寒：右手を握る(グー)→右移動、左手を握る(グー)→左移動。上腕トラッキング(Pose)は一切使わず、
+    // 手だけを見るHandLandmarkerベースの静止した「手の形」で判定するため、肩・肘のカメラフレーミングに
+    // 依存しない（Swimの横払い等と同じパイプラインなので、上腕系ジェスチャーが不調でも独立して動く）。
+    // 保持時間(dwell)＋崩れるまで再発火しない(release)方式で、HandsTogetherと同じ構造。
+    private void DetectFistHold(float dt)
     {
-      EvaluateSidewaysExtend(_pose.rightArmValid, _pose.rightElbowAngle, _pose.rightWristViewport, _pose.rightShoulderViewport,
-        ref _rightLaneSwitchTimer, ref _rightLaneSwitchArmed, GestureType.RightArmSidewaysExtend);
-      EvaluateSidewaysExtend(_pose.leftArmValid, _pose.leftElbowAngle, _pose.leftWristViewport, _pose.leftShoulderViewport,
-        ref _leftLaneSwitchTimer, ref _leftLaneSwitchArmed, GestureType.LeftArmSidewaysExtend);
+      EvaluateFistHold(_right, dt, ref _rightFistTimer, ref _rightFistArmed, GestureType.RightHandFist);
+      EvaluateFistHold(_left, dt, ref _leftFistTimer, ref _leftFistArmed, GestureType.LeftHandFist);
     }
 
-    private void EvaluateSidewaysExtend(bool armValid, float elbowAngle, Vector2 wristViewport, Vector2 shoulderViewport,
-      ref float holdTimer, ref bool armed, GestureType type)
+    private void EvaluateFistHold(in HandFrame hand, float dt, ref float holdTimer, ref bool armed, GestureType type)
     {
-      var verticalOffset = wristViewport.y - shoulderViewport.y;
-      var extended = armValid && elbowAngle >= _sidewaysExtendMinAngle && Mathf.Abs(verticalOffset) <= _sidewaysLevelTolerance;
-
-      if (!extended)
+      if (!hand.valid || !IsFist(hand))
       {
         holdTimer = 0f;
         armed = true;
         return;
       }
 
-      if (!armed) return; // 発火後は腕を戻す(extended=falseになる)まで再発火しない
+      if (!armed) return; // 発火後は手を開く(グーが崩れる)まで再発火しない
 
-      holdTimer += PoseDt();
-      if (holdTimer >= _sidewaysHoldSeconds)
+      holdTimer += dt;
+      if (holdTimer >= _fistHoldSeconds)
       {
         if (TryFire(type)) armed = false;
       }
     }
 
-    // 両拳を交互に突き出す（パンチ）：拳の形で肘が伸びる速さ（角速度）がピークを迎えた瞬間を1回とし、
-    // さらに直近の短い時間で実際に大きく腕を伸ばしたこと（角度の増加量）も要求する。
+    // 両拳を交互に突き出す（パンチ）：突く前は腕を曲げて拳が胸・肩の近くにあり、前腕（肘→手首）は
+    // 画面内でおおむね垂直に近い。突き出すと前腕が水平に近づく。この「前腕の画面内角度が垂直から
+    // 水平へ変化する速さ」がピークを迎えた瞬間を1回とし、直近の短い時間で実際に大きく変化したこと
+    // （角度の減少量）も要求する。
     //
     // カメラへ向かう動き（Z方向）はMediaPipeのワールド座標のZ(奥行き)推定が特に乱れやすい
     // （速い動きで縮む/伸びる既知の問題がある）ため使わない。画面内サイズの拡大速度も
     // プレイヤーがカメラからどれだけ離れて座っているかに応じて感度が変わってしまうため採用しなかった。
-    // 代わりに肩-肘-手首のなす角（PoseTrackingController経由）を使う。角度は距離に対してスケール不変
-    // （プレイヤーがどれだけ離れて座っていても同じ角度になる）なため、より頑健な唯一の特徴量にできる。
+    // 代わりに前腕そのものの画面内角度（PoseTrackingController経由）を使う。角度は距離に対して
+    // スケール不変（プレイヤーがどれだけ離れて座っていても同じ角度になる）なため、より頑健な特徴量にできる。
     // PoseLandmarkerの更新はHandLandmarkerとは非同期のため、HandlePoseResultから駆動する。
     private void DetectAlternatingPunch()
     {
-      var rightFired = EvaluatePunch(_right, _prevRight, _pose.rightArmValid, _pose.rightElbowAngle,
-        _prevPose.rightArmValid, _prevPose.rightElbowAngle, _rightPunchDetector, _rightElbowTrace);
-      var leftFired = EvaluatePunch(_left, _prevLeft, _pose.leftArmValid, _pose.leftElbowAngle,
-        _prevPose.leftArmValid, _prevPose.leftElbowAngle, _leftPunchDetector, _leftElbowTrace);
+      var rightFired = EvaluatePunch(_pose.rightArmValid, _pose.rightElbowViewport, _pose.rightWristViewport,
+        _prevPose.rightArmValid, _prevPose.rightElbowViewport, _prevPose.rightWristViewport, _rightPunchDetector, _rightElbowTrace);
+      var leftFired = EvaluatePunch(_pose.leftArmValid, _pose.leftElbowViewport, _pose.leftWristViewport,
+        _prevPose.leftArmValid, _prevPose.leftElbowViewport, _prevPose.leftWristViewport, _leftPunchDetector, _leftElbowTrace);
 
       if (rightFired || leftFired)
       {
@@ -773,7 +770,14 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    private bool EvaluatePunch(in HandFrame hand, in HandFrame prevHand, bool armValid, float angle, bool prevArmValid, float prevAngle,
+    /// <summary>前腕（肘→手首）が画面内で水平からどれだけ離れているか（度、0=水平 90=垂直）。</summary>
+    private static float ForearmAngleFromHorizontal(Vector2 elbow, Vector2 wrist)
+    {
+      var dir = wrist - elbow;
+      return dir.sqrMagnitude < 1e-8f ? 0f : Vector2.Angle(dir, Vector2.right);
+    }
+
+    private bool EvaluatePunch(bool armValid, Vector2 elbow, Vector2 wrist, bool prevArmValid, Vector2 prevElbow, Vector2 prevWrist,
       SwingDetector detector, AngleTrace trace)
     {
       if (!armValid || !prevArmValid)
@@ -782,22 +786,18 @@ namespace DemonLordHR.HandTracking
         return false;
       }
 
-      var dt = Mathf.Max(_pose.timestamp - _prevPose.timestamp, 0.0001f);
-      var angleSpeed = Mathf.Max((angle - prevAngle) / dt, 0f);
+      var angle = ForearmAngleFromHorizontal(elbow, wrist);
+      var prevAngle = ForearmAngleFromHorizontal(prevElbow, prevWrist);
+      var dt = PoseDt();
+      // 水平に近づく(角度が減る)速さをパンチの特徴量にする。
+      var angleDecreaseSpeed = Mathf.Max((prevAngle - angle) / dt, 0f);
+      var wasVertical = prevAngle >= _punchVerticalMinAngle;
 
-      // ハンマー（縦振り）との取り違え防止：手が縦方向優勢に下降している最中はパンチの立ち上がりを許可しない。
-      // 肘の伸展角度だけでは「振り下ろして腕が伸びる」と「突き出して腕が伸びる」を区別できないため、
-      // 生の手首移動方向で補強する。
-      var dominantlyDownward = hand.valid && prevHand.valid
-        && Mathf.Abs(hand.wrist.y - prevHand.wrist.y) > Mathf.Abs(hand.wrist.z - prevHand.wrist.z)
-        && hand.wrist.y < prevHand.wrist.y;
-      var canEnter = IsFist(hand) && !dominantlyDownward;
+      if (!detector.Update(angleDecreaseSpeed, wasVertical)) return false;
 
-      if (!detector.Update(angleSpeed, canEnter)) return false;
-
-      var angleIncreaseOk = trace.GetIncrease() > _punchMinAngleIncrease;
+      var angleDecreaseOk = -trace.GetIncrease() > _punchMinAngleDecrease;
       trace.Clear();
-      return angleIncreaseOk;
+      return angleDecreaseOk;
     }
 
     // 両手を前で合わせる：両手首が近接した状態を一定時間保持。

@@ -92,11 +92,19 @@ namespace DemonLordHR.Minigames
     public float Score { get; private set; }
 
     /// <summary>障害物が前進する方向（＝カメラ/パイロットに近づく向き）。obstacleSpawnPointから
-    /// pilotSpawnPointへ向かうベクトルから求めるため、ステージの向きに関わらず正しく機能する。</summary>
-    private Vector3 ObstacleForwardAxis =>
-      obstacleSpawnPoint != null && pilotSpawnPoint != null
-        ? (pilotSpawnPoint.position - obstacleSpawnPoint.position).normalized
-        : Vector3.back;
+    /// pilotSpawnPointへ向かうベクトルから求めるため、ステージの向きに関わらず正しく機能する。
+    /// 高さ(Y)は障害物ごとにgapCenterYで個別に決まるため、進行方向自体は水平成分だけを使う
+    /// （2点のYが完全に一致していないと斜めに進んでしまうため、Y差の影響を受けないようにする）。</summary>
+    private Vector3 ObstacleForwardAxis
+    {
+      get
+      {
+        if (obstacleSpawnPoint == null || pilotSpawnPoint == null) return Vector3.back;
+        var diff = pilotSpawnPoint.position - obstacleSpawnPoint.position;
+        diff.y = 0f;
+        return diff.sqrMagnitude > 1e-6f ? diff.normalized : Vector3.back;
+      }
+    }
 
     /// <summary>隙間の半径（中心から上端/下端までの距離）。直径がパイロット当たり判定の直径+gapMarginになる。</summary>
     private float GapRadius => pilotColliderRadius + gapMargin * 0.5f;

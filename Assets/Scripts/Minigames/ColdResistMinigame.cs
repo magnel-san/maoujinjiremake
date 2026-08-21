@@ -7,9 +7,10 @@ using UnityEngine;
 namespace DemonLordHR.Minigames
 {
   /// <summary>
-  /// 【耐寒】仕様4.8：3レーン上で「右腕を横に伸ばす→右移動」「左腕を横に伸ばす→左移動」でレーン移動し、
-  /// 飛んでくる氷塊を回避する。左右どちらの腕を伸ばしたかで移動方向が決まるため、
-  /// スワイプの速度方向に頼る方式と違って両方向が同時に誤発火することがない。
+  /// 【耐寒】仕様4.8：3レーン上で「右手を握る(グー)→右移動」「左手を握る(グー)→左移動」でレーン移動し、
+  /// 飛んでくる氷塊を回避する。上腕トラッキング(PoseTrackingController)を使わず、手の形（静止ポーズ）
+  /// だけで判定するため、肩・肘のカメラフレーミングに依存しない。左右どちらの手を握ったかで
+  /// 移動方向が決まるため、両方向が同時に誤発火することもない。
   /// 採用キャラは中央レーンに配置してスタートする。被弾した場合は即ゲームオーバーにはせず、
   /// 数秒のスタン（その間はレーン移動できない）というペナルティにしている。
   /// </summary>
@@ -29,12 +30,14 @@ namespace DemonLordHR.Minigames
 
     [Header("氷塊オブジェクト")]
     [SerializeField] private GameObject iceChunkPrefab;
-    [Tooltip("各レーンの出現位置（プレイヤーから見て奥）。[0]=左, [1]=中央, [2]=右")]
+    [Tooltip("各レーンの出現位置（プレイヤーから見て奥）。[0]=左, [1]=中央, [2]=右。" +
+      "対応するlanePositionsへ向かうベクトルを進行方向として自動計算するため、Z座標を手打ちで" +
+      "揃える必要はない（配置がどの向きでも正しく機能する）。")]
     [SerializeField] private Transform[] iceSpawnPoints = new Transform[LaneCount];
     [SerializeField] private float iceSpeed = 5f;
     [SerializeField] private float iceSpawnInterval = 1.2f;
-    [Tooltip("この位置を通過した瞬間に、その氷塊のレーンとプレイヤーの現在レーンを比較して命中判定する")]
-    [SerializeField] private float judgeZ;
+    [Tooltip("lanePositionsを通過してから何m先で自動的に消すか")]
+    [SerializeField] private float despawnDistancePastLane = 5f;
 
     [Header("被弾ペナルティ")]
     [SerializeField] private float stunSeconds = 2f;
@@ -47,7 +50,7 @@ namespace DemonLordHR.Minigames
     private CharacterData _defender;
     private GameObject _defenderInstance;
     private readonly List<GameObject> _remainingLineup = new List<GameObject>();
-    private readonly List<(Transform transform, int lane, bool judged)> _iceChunks = new List<(Transform, int, bool)>();
+    private readonly List<(Transform transform, int lane, Vector3 direction, bool judged)> _iceChunks = new List<(Transform, int, Vector3, bool)>();
     private float _spawnTimer;
     private float _stunTimer;
 
@@ -119,11 +122,11 @@ namespace DemonLordHR.Minigames
 
       switch (type)
       {
-        case GestureType.LeftArmSidewaysExtend:
+        case GestureType.LeftHandFist:
           CurrentLane = Mathf.Max(0, CurrentLane - 1);
           UpdateDefenderPosition();
           break;
-        case GestureType.RightArmSidewaysExtend:
+        case GestureType.RightHandFist:
           CurrentLane = Mathf.Min(LaneCount - 1, CurrentLane + 1);
           UpdateDefenderPosition();
           break;
@@ -135,11 +138,11 @@ namespace DemonLordHR.Minigames
     {
       switch (type)
       {
-        case GestureType.LeftArmSidewaysExtend:
+        case GestureType.LeftHandFist:
           CurrentLane = Mathf.Max(0, CurrentLane - 1);
           UpdateDefenderPosition();
           break;
-        case GestureType.RightArmSidewaysExtend:
+        case GestureType.RightHandFist:
           CurrentLane = Mathf.Min(LaneCount - 1, CurrentLane + 1);
           UpdateDefenderPosition();
           break;
@@ -164,14 +167,18 @@ namespace DemonLordHR.Minigames
 
     private void SpawnIceChunk()
     {
-      if (iceChunkPrefab == null || iceSpawnPoints == null || iceSpawnPoints.Length == 0) return;
+      if (iceChunkPrefab == null || iceSpawnPoints == null || iceSpawnPoints.Length == 0 || lanePositions == null) return;
 
       var lane = Random.Range(0, iceSpawnPoints.Length);
       var point = iceSpawnPoints[lane];
-      if (point == null) return;
+      var lanePoint = lane < lanePositions.Length ? lanePositions[lane] : null;
+      if (point == null || lanePoint == null) return;
 
-      var instance = Instantiate(iceChunkPrefab, point.position, point.rotation);
-      _iceChunks.Add((instance.transform, lane, false));
+      // レーンの出現位置から立ち位置へ向かうベクトルを進行方向にする（Z座標の手打ちに頼らないため、
+      // 出現位置がプレイヤーからどちらの向きに置かれていても正しく接近してくる）。
+      var direction = (lanePoint.position - point.position).normalized;
+      var instance = Instantiate(iceChunkPrefab, point.position, Quaternion.LookRotation(direction, Vector3.up));
+      _iceChunks.Add((instance.transform, lane, direction, false));
     }
 
     private void UpdateIceChunks(float deltaTime)
@@ -179,22 +186,27 @@ namespace DemonLordHR.Minigames
       for (var i = _iceChunks.Count - 1; i >= 0; i--)
       {
         var entry = _iceChunks[i];
-        if (entry.transform == null)
+        if (entry.transform == null || lanePositions == null || entry.lane >= lanePositions.Length || lanePositions[entry.lane] == null)
         {
+          if (entry.transform != null) Destroy(entry.transform.gameObject);
           _iceChunks.RemoveAt(i);
           continue;
         }
 
-        entry.transform.position += Vector3.back * iceSpeed * deltaTime;
+        entry.transform.position += entry.direction * (iceSpeed * deltaTime);
 
-        if (!entry.judged && entry.transform.position.z <= judgeZ)
+        // 対応するレーンの立ち位置を通過した瞬間に命中判定する。
+        var distancePastLane = Vector3.Dot(entry.transform.position - lanePositions[entry.lane].position, entry.direction);
+
+        if (!entry.judged && distancePastLane >= 0f)
         {
           JudgeIceChunk(entry.lane);
-          entry = (entry.transform, entry.lane, true);
+          entry = (entry.transform, entry.lane, entry.direction, true);
           _iceChunks[i] = entry;
+          distancePastLane = Vector3.Dot(entry.transform.position - lanePositions[entry.lane].position, entry.direction);
         }
 
-        if (entry.transform.position.z < judgeZ - 5f)
+        if (distancePastLane >= Mathf.Max(despawnDistancePastLane, 0.1f))
         {
           Destroy(entry.transform.gameObject);
           _iceChunks.RemoveAt(i);
