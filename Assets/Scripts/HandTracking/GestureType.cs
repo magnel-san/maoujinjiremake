@@ -5,8 +5,6 @@ namespace DemonLordHR.HandTracking
   /// </summary>
   public enum GestureType
   {
-    /// <summary>胸の前で腕をクロス → 不採用の意思表示</summary>
-    ArmsCross,
     /// <summary>手で横に払う → 【遊泳】攻撃</summary>
     SwipeSideways,
     /// <summary>腕を翼のように上下に振る → 【飛行】操作</summary>

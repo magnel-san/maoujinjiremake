@@ -20,9 +20,13 @@ namespace DemonLordHR.HandTracking
   public class PointerController : MonoBehaviour
   {
     [SerializeField] private HandTrackingController _handTrackingController;
-    [Tooltip("ポインターとして表示するオブジェクト（未指定なら自動生成）")]
+    [Tooltip("ポインターとして表示するオブジェクト。シーン上に既に置いてある物を直接使いたい場合はここに指定する" +
+      "（指定した場合、_pointerVisualPrefabは無視する）。")]
     [SerializeField] private Transform _pointerVisual;
-    [Tooltip("自動生成する場合のポインター(球)の半径")]
+    [Tooltip("ポインターとして生成するプレハブ（カーソルの3Dモデル等）。_pointerVisualが未指定の場合、" +
+      "Awake時にこれをInstantiateしてカーソルとして使う。これも未指定なら球を自動生成する。")]
+    [SerializeField] private GameObject _pointerVisualPrefab;
+    [Tooltip("_pointerVisual/_pointerVisualPrefabのどちらも未指定の場合に自動生成する球の半径")]
     [SerializeField] private float _pointerRadius = 5f;
 
     [Header("画面マッピング方式（UIをまとめて指す場合）")]
@@ -63,17 +67,25 @@ namespace DemonLordHR.HandTracking
 
     private void Awake()
     {
+      if (_pointerVisual == null && _pointerVisualPrefab != null)
+      {
+        var instance = Instantiate(_pointerVisualPrefab);
+        instance.name = "PointerVisual";
+        _pointerVisual = instance.transform;
+        return; // プレハブ側で見た目・スケールを作り込んである前提なので、半径によるスケール上書きはしない。
+      }
+
       if (_pointerVisual == null)
       {
         var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         go.name = "PointerVisual";
         Destroy(go.GetComponent<Collider>());
         _pointerVisual = go.transform;
-      }
 
-      // Sphereプリミティブは半径0.5(直径1)がスケール1に相当するため、
-      // 指定した半径になるようスケールを直径換算で設定する。
-      _pointerVisual.localScale = Vector3.one * (_pointerRadius * 2f);
+        // Sphereプリミティブは半径0.5(直径1)がスケール1に相当するため、
+        // 指定した半径になるようスケールを直径換算で設定する。
+        _pointerVisual.localScale = Vector3.one * (_pointerRadius * 2f);
+      }
     }
 
     private void Update()

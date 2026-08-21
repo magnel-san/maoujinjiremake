@@ -30,6 +30,9 @@ namespace DemonLordHR.Core
   {
     [SerializeField] private GameSettings _settings;
     [SerializeField] private HandTrackingController _handTrackingController;
+    [Tooltip("ミニゲームのたびにワープするプレイヤー本体（MinigameBase.playerRootと同じオブジェクト）。" +
+      "ミニゲームフェーズ開始前の位置を覚えておき、全ミニゲーム終了後にそこへ戻すために使う。")]
+    [SerializeField] private Transform _playerRoot;
     [SerializeField] private CircularHoldButton _titleStartButton;
     [SerializeField] private CircularHoldButton _ruleReadyButton;
     [SerializeField] private RecruitmentPhaseController _recruitmentController;
@@ -38,6 +41,14 @@ namespace DemonLordHR.Core
 
     [Header("ミニゲーム（ジャンルごとに1つ割り当てる）")]
     [SerializeField] private List<GenreMinigameEntry> _minigames = new List<GenreMinigameEntry>();
+
+    [Header("デバッグ：指定したミニゲームから直接開始する")]
+    [Tooltip("ONの場合、タイトル画面・採用試験を全てスキップし、_debugGenreに対応するミニゲームだけを" +
+      "_debugHiredCharactersを採用済み扱いにして実行する。個別ミニゲームの動作確認用。")]
+    [SerializeField] private bool _debugStartFromMinigame;
+    [SerializeField] private RecruitmentGenre _debugGenre;
+    [Tooltip("デバッグ時、採用試験を経ずに「採用済み」として渡す仮のキャラクター一覧")]
+    [SerializeField] private List<CharacterData> _debugHiredCharacters = new List<CharacterData>();
 
     [System.Serializable]
     public class GenreMinigameEntry
@@ -61,7 +72,33 @@ namespace DemonLordHR.Core
 
     private void Start()
     {
-      StartCoroutine(RunGameLoopForever());
+      StartCoroutine(_debugStartFromMinigame ? RunDebugMinigameOnly() : RunGameLoopForever());
+    }
+
+    /// <summary>デバッグ用：タイトル・採用試験を全てスキップし、指定した1ジャンルのミニゲームだけを
+    /// 仮のキャラクターで実行する。個別ミニゲームの動作確認をするための入り口。</summary>
+    private IEnumerator RunDebugMinigameOnly()
+    {
+      if (_handTrackingController != null) _handTrackingController.HandsVisible = true;
+
+      var minigame = _minigames.FirstOrDefault(e => e.genre == _debugGenre)?.minigame;
+      if (minigame == null)
+      {
+        Debug.LogError($"[GameFlowManager] デバッグ起動: ジャンル{_debugGenre}に対応するミニゲームが_minigamesに設定されていません。");
+        yield break;
+      }
+
+      minigame.AssignCharacters(_debugHiredCharacters);
+
+      var finished = false;
+      void OnFinished(MinigameResult r) => finished = true;
+      minigame.OnMinigameFinished += OnFinished;
+
+      yield return minigame.RunAsync();
+      yield return new WaitUntil(() => finished);
+
+      minigame.OnMinigameFinished -= OnFinished;
+      Debug.Log($"[GameFlowManager] デバッグ起動: {_debugGenre}のミニゲームが終了しました。");
     }
 
     private static void SetButtonActive(CircularHoldButton button, bool active)
@@ -116,6 +153,11 @@ namespace DemonLordHR.Core
       CurrentState = GameState.Minigame;
       _defenseSuccessCount = 0;
       _gameOverCount = 0;
+
+      // 各ミニゲームはこの後プレイヤー本体をその場所へワープさせるため、
+      // 全ミニゲーム終了後に戻れるよう、ここで元の位置を覚えておく。
+      var originalPlayerPosition = _playerRoot != null ? (Vector3?)_playerRoot.position : null;
+
       foreach (var genre in _selectedGenres)
       {
         var minigame = _minigames.FirstOrDefault(e => e.genre == genre)?.minigame;
@@ -138,6 +180,8 @@ namespace DemonLordHR.Core
         if (result == MinigameResult.DefenseSuccess) _defenseSuccessCount++;
         else if (result == MinigameResult.GameOver) _gameOverCount++;
       }
+
+      if (originalPlayerPosition.HasValue) _playerRoot.position = originalPlayerPosition.Value;
 
       CurrentState = GameState.FinalBattle;
       if (_finalBattleController != null)

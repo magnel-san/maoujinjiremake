@@ -61,12 +61,6 @@ namespace DemonLordHR.Core
     [Tooltip("各ミニゲームの制限時間（既定値。ジャンルごとに上書き可）")]
     public float defaultMinigameTimeLimit = 60f;
 
-    [Header("【飛行】")]
-    [Tooltip("復活回数計算に使う除数")]
-    public float flightRevivalDivisor = 100f;
-    [Tooltip("失敗から復活までの秒数")]
-    public float flightRevivalDelaySeconds = 1f;
-
     [Header("最終決戦")]
     public float finalBattleMaxHp = 1000f;
     [Tooltip("パンチ1回あたりのダメージ")]

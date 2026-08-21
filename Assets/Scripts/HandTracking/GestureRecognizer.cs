@@ -25,7 +25,7 @@ namespace DemonLordHR.HandTracking
   ///    MediaPipeの生ランドマークは細かくジッターするため、平滑化しないとノイズが一瞬の「速い動き」
   ///    として誤検出される。動き出しの追従を犠牲にしないよう、静止時ほど強く平滑化する適応型フィルタを使う。
   /// 2. ステートマシン：
-  ///    - 「ポーズが成立している間」を条件にする判定（輪っか・腕クロス・頭上・両手を合わせる）は、
+  ///    - 「ポーズが成立している間」を条件にする判定（頭上・両手を合わせる）は、
   ///      一定時間の保持(dwell)を要求し、発火後はポーズが崩れる(release)まで再発火しないエッジトリガー方式。
   ///    - 「振る」系の一発物（拍手・スワイプ・羽ばたき・両腕振り・ハンマー・パンチ）は<see cref="SwingDetector"/>で、
   ///      速度がしきい値を超えて立ち上がり、ピークを迎えて下降し始めた瞬間に1回だけ発火し、
@@ -33,12 +33,15 @@ namespace DemonLordHR.HandTracking
   ///    - 連続回転（バルブ回し）だけは「止まるまで再発火しない」方式と相性が悪いため、
   ///      <see cref="RotationTracker"/>で実際に回転した角度を積算し、一定角度ごとに繰り返し発火する。
   ///
-  /// パンチ（不採用の意思表示）だけは特殊で、手首の速度・画面内サイズの拡大速度など
+  /// パンチ（【戦闘】攻撃／最終決戦連打）だけは特殊で、手首の速度・画面内サイズの拡大速度など
   /// カメラへ向かう動き自体を直接測る方式を色々試したが、いずれもMediaPipeが不得意とする軸
   /// （奥行き、または見た目のサイズはプレイヤーがカメラからどれだけ離れて座っているかに依存する）に
   /// 頼らざるを得なかった。代わりに<see cref="PoseTrackingController"/>から肩・肘・手首を取得し、
   /// 「肘の伸展角度（肩-肘-手首のなす角）」の変化速度で判定する。角度はプレイヤーの座る位置に
   /// 依存しないスケール不変な特徴量であり、より頑健。
+  ///
+  /// なお履歴書の採用/不採用/ページ送りは、本クラスではなく<see cref="ResumePoseRecognizer"/>が
+  /// 独立して判定している（静止ポーズのみで判定する別方式のため）。
   /// </summary>
   public class GestureRecognizer : MonoBehaviour
   {
@@ -68,10 +71,6 @@ namespace DemonLordHR.HandTracking
     [SerializeField, Range(0f, 1f)] private float _hammerRaisedViewportY = 0.55f;
     [Tooltip("HandsTogether判定に必要な保持秒数")]
     [SerializeField] private float _handsTogetherHoldSeconds = 0.3f;
-
-    [Header("腕クロス（不採用の意思表示）")]
-    [Tooltip("腕クロスと判定するまでの保持秒数（誤検出防止）")]
-    [SerializeField] private float _armsCrossHoldSeconds = 0.25f;
 
     [Header("パンチ（右手突き出し／両拳交互）：肘の伸展角度で判定")]
     [Tooltip("肘の角度増加を測る時間窓（秒）")]
@@ -116,9 +115,6 @@ namespace DemonLordHR.HandTracking
 
     private float _handsTogetherTimer;
     private bool _handsTogetherArmed = true;
-
-    private float _armsCrossHoldTimer;
-    private bool _armsCrossArmed = true;
 
     private readonly AngleTrace _rightElbowTrace = new AngleTrace();
     private readonly AngleTrace _leftElbowTrace = new AngleTrace();
@@ -608,7 +604,6 @@ namespace DemonLordHR.HandTracking
     {
       var dt = Mathf.Max(Time.deltaTime, 0.0001f);
 
-      DetectArmsCross(dt);
       DetectHorizontalSwipes(dt);
       DetectWingFlap(dt);
       DetectArmSwingBoth(dt);
@@ -632,32 +627,6 @@ namespace DemonLordHR.HandTracking
     {
       if (!current.valid || !previous.valid) return Vector3.zero;
       return (current.wrist - previous.wrist) / dt;
-    }
-
-    // 胸の前で腕をクロス（左右の手首が体の中心線をまたいで入れ替わる）。
-    // 保持時間(dwell)＋崩れるまで再発火しない(release)方式で誤検出・連続発火を防ぐ。
-    private void DetectArmsCross(float dt)
-    {
-      if (!_left.valid || !_right.valid)
-      {
-        _armsCrossHoldTimer = 0f;
-        _armsCrossArmed = true;
-        return;
-      }
-
-      var crossed = _left.wrist.x > _right.wrist.x + 0.02f;
-      if (!crossed)
-      {
-        _armsCrossHoldTimer = 0f;
-        _armsCrossArmed = true;
-        return;
-      }
-
-      _armsCrossHoldTimer += dt;
-      if (_armsCrossArmed && _armsCrossHoldTimer >= _armsCrossHoldSeconds)
-      {
-        if (TryFire(GestureType.ArmsCross)) _armsCrossArmed = false;
-      }
     }
 
     // 手で横に払う／左右への腕振り。水平速度が主成分としてピークを迎えた瞬間を1回とする。

@@ -1,45 +1,124 @@
 using DemonLordHR.HandTracking;
+using TMPro;
 using UnityEngine;
 
 namespace DemonLordHR.Minigames
 {
   /// <summary>
-  /// 【知性】仕様4.7：ランダムに光るノードをポインターで順番に指してつなぎ、
-  /// 「両手を前で合わせる」で魔法陣を起動する。
+  /// 【知性】仕様4.7：円周上に並んだ5つのノード（五芒星の頂点）を、指定された一筆書きの順番で
+  /// 人差し指でなぞり、両手を合わせて起動する。
+  ///
+  /// なぞり順は、円周上に並んだ順の各頂点(0〜4)を2つ飛ばしで結ぶ五芒星の一筆書き順
+  /// （0→2→4→1→3→0）に固定している。<see cref="nodes"/>は円周上に並んだ順（0〜4）で
+  /// 設定する前提。正しい順に全て触れてから両手を合わせるとスコア加算、途中で順番を間違えた場合は
+  /// 両手を合わせても加算されず、線がリセットされて最初からやり直しになる
+  /// （ミスに気付いた時点で即失敗にはせず、両手を合わせるまでは猶予がある）。
   /// </summary>
   public class IntelligenceMinigame : MinigameBase
   {
-    [SerializeField] private int _requiredNodeCount = 5;
+    private static readonly int[] PentagramOrder = { 0, 2, 4, 1, 3 };
+
+    [Header("ノード（円周上に並んだ順で0〜4を設定する）")]
+    [SerializeField] private MagicCircleNode[] nodes = new MagicCircleNode[5];
+
+    [Header("案内線")]
+    [Tooltip("正しいなぞり順を示すガイド線。未設定なら実行時に自動生成する。")]
+    [SerializeField] private LineRenderer guideLine;
+    [SerializeField] private float guideLineWidth = 0.03f;
+    [SerializeField] private Color guideLineColor = Color.cyan;
+
+    [Header("UI")]
+    [SerializeField] private TMP_Text scoreText;
 
     public float Score { get; private set; }
     public int CompletionCount { get; private set; }
-    public int ConnectedNodeCount { get; private set; }
+
+    private int _nextExpectedStep;
+    private bool _mistakeMade;
 
     protected override void OnMinigameStart()
     {
       Score = 0f;
       CompletionCount = 0;
-      ConnectedNodeCount = 0;
-      // TODO: 未完成の巨大な魔法陣を表示し、光るノードをランダム配置する
+      ResetTrace();
+      UpdateScoreText();
+      DrawGuideLine();
     }
 
-    /// <summary>シーン上の<see cref="MagicCircleNode"/>がポインターで指された際に呼ばれる。</summary>
-    public void RegisterNodeConnected()
+    protected override void OnMinigameEnd(MinigameResult finalResult)
+    {
+      if (guideLine != null) guideLine.gameObject.SetActive(false);
+    }
+
+    /// <summary>シーン上の<see cref="MagicCircleNode"/>が接続判定した際に呼ばれる。</summary>
+    public void RegisterNodeTouched(int nodeIndex)
     {
       if (!IsRunning) return;
-      ConnectedNodeCount = Mathf.Min(_requiredNodeCount, ConnectedNodeCount + 1);
-      // TODO: ノード間に線を描画する
+
+      if (_nextExpectedStep < PentagramOrder.Length && nodeIndex == PentagramOrder[_nextExpectedStep])
+      {
+        _nextExpectedStep++;
+      }
+      else
+      {
+        // すぐには失敗にせず、両手を合わせた時点で判定する（ミスに気付いてもそこで終わりにしない）。
+        _mistakeMade = true;
+      }
     }
 
     protected override void OnGestureForMinigame(GestureType type)
     {
       if (type != GestureType.HandsTogether) return;
-      if (ConnectedNodeCount < _requiredNodeCount) return;
 
-      Score += totalAttackPower;
-      CompletionCount++;
-      ConnectedNodeCount = 0;
-      // TODO: 魔法陣起動エフェクトを再生し、次のノードセットを配置する
+      if (!_mistakeMade && _nextExpectedStep >= PentagramOrder.Length)
+      {
+        Score += totalAttackPower;
+        CompletionCount++;
+        UpdateScoreText();
+      }
+
+      ResetTrace();
+    }
+
+    private void ResetTrace()
+    {
+      _nextExpectedStep = 0;
+      _mistakeMade = false;
+      foreach (var node in nodes)
+      {
+        node?.ResetNode();
+      }
+    }
+
+    private void DrawGuideLine()
+    {
+      if (nodes == null || nodes.Length < PentagramOrder.Length) return;
+
+      if (guideLine == null)
+      {
+        var go = new GameObject("MagicCircleGuideLine");
+        go.transform.SetParent(transform, false);
+        guideLine = go.AddComponent<LineRenderer>();
+        guideLine.useWorldSpace = true;
+        guideLine.loop = true;
+        guideLine.widthMultiplier = guideLineWidth;
+        guideLine.material = new Material(Shader.Find("Sprites/Default"));
+        guideLine.startColor = guideLineColor;
+        guideLine.endColor = guideLineColor;
+      }
+
+      guideLine.gameObject.SetActive(true);
+      guideLine.positionCount = PentagramOrder.Length;
+      for (var i = 0; i < PentagramOrder.Length; i++)
+      {
+        var node = nodes[PentagramOrder[i]];
+        if (node != null) guideLine.SetPosition(i, node.transform.position);
+      }
+    }
+
+    private void UpdateScoreText()
+    {
+      if (scoreText != null) scoreText.text = $"起動回数: {CompletionCount}（スコア {Score:0}）";
     }
   }
 }

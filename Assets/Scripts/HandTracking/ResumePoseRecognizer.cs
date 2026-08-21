@@ -76,6 +76,7 @@ namespace DemonLordHR.HandTracking
     public float HoldProgress01 => _holdSeconds > 0f ? Mathf.Clamp01(_holdTimer / _holdSeconds) : 0f;
 
     private float _holdTimer;
+    private float _lastFrameTime;
 
     private void OnEnable()
     {
@@ -92,16 +93,27 @@ namespace DemonLordHR.HandTracking
     {
       _capturing = capturing;
       ResetSmoothing();
-      SetPose(ResumePose.None);
+      _lastFrameTime = 0f; // 次にHandleResultが呼ばれた時、経過時間を0として扱う（前回セッションの古い時刻を引きずらないため）
+      SetPose(ResumePose.None, 0f);
     }
 
     private void HandleResult(HandLandmarkerResult result)
     {
       if (!_capturing) return;
-      SetPose(ClassifyCurrentPose(result));
+
+      // このメソッドはUnityの毎フレームUpdate()ではなく、MediaPipeの検出結果が届くたびに呼ばれる
+      // （HandTrackingController側のVIDEOモード検出ループの頻度に従うため、Unityの描画フレームレートより
+      // 遅いことが多い）。そのためTime.deltaTime（前回の描画フレームからの経過時間）を使うと、
+      // 実際に経過した時間よりずっと小さい値しか加算されず、保持タイマーが異常に長くかかる原因になる。
+      // 代わりに、前回この関数が呼ばれてからの実際の経過時間をTime.timeの差分で計測する。
+      var now = Time.time;
+      var dt = _lastFrameTime > 0f ? Mathf.Max(now - _lastFrameTime, 0f) : 0f;
+      _lastFrameTime = now;
+
+      SetPose(ClassifyCurrentPose(result), dt);
     }
 
-    private void SetPose(ResumePose pose)
+    private void SetPose(ResumePose pose, float dt)
     {
       if (pose != CurrentPose)
       {
@@ -111,7 +123,7 @@ namespace DemonLordHR.HandTracking
 
       if (CurrentPose == ResumePose.None) return;
 
-      _holdTimer += Time.deltaTime;
+      _holdTimer += dt;
       if (_holdTimer >= _holdSeconds)
       {
         _holdTimer = 0f;
