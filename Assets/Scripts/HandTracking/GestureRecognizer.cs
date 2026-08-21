@@ -97,10 +97,11 @@ namespace DemonLordHR.HandTracking
     [SerializeField, Range(0f, 1f)] private float _poseHammerRaisedViewportY = 0.55f;
 
     [Header("耐寒（腕を横方向に伸ばしてレーン移動）")]
-    [Tooltip("肘が伸びている（横に突き出している）とみなす最小角度（度）")]
-    [SerializeField] private float _sidewaysExtendMinAngle = 150f;
-    [Tooltip("手首と肩の高さの差がこの範囲内なら「横に伸ばしている」とみなす（画面内比率、0〜1）")]
-    [SerializeField, Range(0f, 0.5f)] private float _sidewaysLevelTolerance = 0.15f;
+    [Tooltip("肘が伸びている（横に突き出している）とみなす最小角度（度）。反応しない場合はまずこの値を下げて確認する。")]
+    [SerializeField] private float _sidewaysExtendMinAngle = 130f;
+    [Tooltip("手首と肩の高さの差がこの範囲内なら「横に伸ばしている」とみなす（画面内比率、0〜1）。" +
+      "反応しない場合はこの値を上げて確認する。")]
+    [SerializeField, Range(0f, 0.5f)] private float _sidewaysLevelTolerance = 0.22f;
     [Tooltip("誤発火防止のため、この秒数だけ伸ばした状態を維持したら発火する")]
     [SerializeField] private float _sidewaysHoldSeconds = 0.15f;
 

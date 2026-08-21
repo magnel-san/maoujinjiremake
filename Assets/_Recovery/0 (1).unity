@@ -496,7 +496,7 @@ MonoBehaviour:
   completedCountText: {fileID: 184897554}
   stackObjectPrefab: {fileID: 8908682033280163224, guid: 35e4aa00754939747ae1b21feff07c1b, type: 3}
   stackBasePoint: {fileID: 232421279}
-  stackHeightPerObject: 10
+  stackHeightPerObject: 0.3
   backgroundRenderer: {fileID: 1087477640}
   backgroundStages:
   - {fileID: 2100000, guid: 5071c0d644c3b23408447d8cbfd28dc6, type: 2}
@@ -976,7 +976,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Minigames.MagicCircleNode
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
-  nodeIndex: 0
+  nodeIndex: 4
 --- !u!65 &142272013
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1634,7 +1634,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -700, y: 100}
+  m_AnchoredPosition: {x: 300, y: 400}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &184897554
@@ -2236,7 +2236,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -700, y: 100}
+  m_AnchoredPosition: {x: 399, y: 174}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &207324694
@@ -2449,7 +2449,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 480}
+  m_AnchoredPosition: {x: 0, y: 502}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &218907185
@@ -2901,7 +2901,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -700, y: 0}
+  m_AnchoredPosition: {x: 0, y: 500}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &261805727
@@ -3113,7 +3113,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 480}
+  m_AnchoredPosition: {x: 0, y: 500}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &281343548
@@ -3265,7 +3265,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Minigames.MagicCircleNode
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
-  nodeIndex: 0
+  nodeIndex: 1
 --- !u!65 &311483164
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3721,7 +3721,7 @@ MonoBehaviour:
   waveSpawnPoint: {fileID: 1557033594}
   waveLifetime: 2
   maxConcurrentWaves: 3
-  waveSpeed: 120
+  waveSpeed: 5
   heroProximitySlider: {fileID: 1556424145}
   heroDamageText: {fileID: 460220645}
 --- !u!1 &366494225
@@ -4380,7 +4380,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 480}
+  m_AnchoredPosition: {x: 0, y: 400}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &444673882
@@ -4508,7 +4508,7 @@ Transform:
   m_GameObject: {fileID: 456923424}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 30, y: 0, z: 240}
+  m_LocalPosition: {x: 30, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4548,7 +4548,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -700, y: 100}
+  m_AnchoredPosition: {x: -500, y: 330}
   m_SizeDelta: {x: 400, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &460220645
@@ -5066,7 +5066,7 @@ MonoBehaviour:
   - {fileID: 456923425}
   - {fileID: 1727348756}
   - {fileID: 1205479171}
-  iceSpeed: 30
+  iceSpeed: 20
   iceSpawnInterval: 1.2
   judgeZ: 0
   stunSeconds: 2
@@ -6903,7 +6903,7 @@ MonoBehaviour:
   fistSpawnPoint: {fileID: 986658227}
   fistLifetime: 1.5
   maxConcurrentFists: 3
-  fistSpeed: 150
+  fistSpeed: 8
   heroProximitySlider: {fileID: 1321540970}
   heroDamageText: {fileID: 207324694}
 --- !u!1 &721522497
@@ -7214,7 +7214,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 250}
+  m_AnchoredPosition: {x: 0, y: 100.000015}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &752232320
@@ -7385,14 +7385,14 @@ MonoBehaviour:
   timerText: {fileID: 2057003370}
   donutCenter: {fileID: 1547600935}
   valveHandle: {fileID: 2869044926924833189, guid: 35e4aa00754939747ae1b21feff07c1b, type: 3}
-  donutRadius: 15
+  donutRadius: 1
   degreesPerFire: 360
   pointerController: {fileID: 1474262218}
   customPointerVisualPrefab: {fileID: 1603229200881648436, guid: 2bfc372a59690b24ca346a018e2fb67a, type: 3}
   magmaObjectPrefab: {fileID: 8908682033280163224, guid: 35e4aa00754939747ae1b21feff07c1b, type: 3}
   magmaPackPrefab: {fileID: 6582511747028413285, guid: d79d612ef177ff94591b6b56c77d4761, type: 3}
   magmaBoxCenter: {fileID: 1799486811}
-  magmaBoxRadius: 20
+  magmaBoxRadius: 1
   magmaPerPack: 10
   backgroundRenderer: {fileID: 1885368534}
   backgroundStages:
@@ -7602,7 +7602,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 480}
+  m_AnchoredPosition: {x: 0, y: 400}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &814691582
@@ -7773,7 +7773,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 700, y: -200}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &835279792
@@ -8094,7 +8094,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -700, y: 100}
+  m_AnchoredPosition: {x: -700, y: 0}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &869159709
@@ -8265,7 +8265,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 480}
+  m_AnchoredPosition: {x: 630, y: -400}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &908843740
@@ -8621,7 +8621,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Minigames.MagicCircleNode
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
-  nodeIndex: 0
+  nodeIndex: 3
 --- !u!65 &967927366
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -10308,7 +10308,7 @@ Transform:
   m_GameObject: {fileID: 1205479170}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -30, y: 0, z: 240}
+  m_LocalPosition: {x: -30, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -10697,7 +10697,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 480}
+  m_AnchoredPosition: {x: 0, y: 400}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1255584523
@@ -11666,7 +11666,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 470}
+  m_AnchoredPosition: {x: 0, y: 465}
   m_SizeDelta: {x: 1600, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1321540970
@@ -11863,7 +11863,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 480}
+  m_AnchoredPosition: {x: 0, y: 500}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1346195748
@@ -12228,7 +12228,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Minigames.MagicCircleNode
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
-  nodeIndex: 0
+  nodeIndex: 2
 --- !u!65 &1370060131
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -12860,7 +12860,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 480}
+  m_AnchoredPosition: {x: 0, y: 492}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1427167140
@@ -13427,8 +13427,8 @@ MonoBehaviour:
   - {fileID: 967927365}
   - {fileID: 142272012}
   guideLine: {fileID: 1458497525}
-  guideLineMaterial: {fileID: 0}
-  guideLineWidth: 5
+  guideLineMaterial: {fileID: 2100000, guid: 5071c0d644c3b23408447d8cbfd28dc6, type: 2}
+  guideLineWidth: 0.03
   guideLineColor: {r: 0, g: 1, b: 1, a: 1}
   scoreText: {fileID: 1705814427}
   pointerController: {fileID: 1474262218}
@@ -13459,7 +13459,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 85ffc2a217d73554d836dfb1e5170f06, type: 2}
+  - {fileID: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -13505,8 +13505,8 @@ LineRenderer:
       m_RotationOrder: 4
     colorGradient:
       serializedVersion: 2
-      key0: {r: 0, g: 1, b: 1, a: 1}
-      key1: {r: 0, g: 1, b: 1, a: 1}
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
       key2: {r: 0, g: 0, b: 0, a: 0}
       key3: {r: 0, g: 0, b: 0, a: 0}
       key4: {r: 0, g: 0, b: 0, a: 0}
@@ -13668,7 +13668,7 @@ MonoBehaviour:
   _maxDistance: 50
   _useRightHand: 1
   _smoothingTime: 0.08
-  _debugUseMouse: 0
+  _debugUseMouse: 1
 --- !u!1 &1481423234
 GameObject:
   m_ObjectHideFlags: 0
@@ -14204,7 +14204,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 470}
+  m_AnchoredPosition: {x: 0, y: 436}
   m_SizeDelta: {x: 1600, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1556424145
@@ -14282,7 +14282,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1557033593}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: -0.00000004371139}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 50}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -14947,7 +14947,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 470}
+  m_AnchoredPosition: {x: 0, y: 500}
   m_SizeDelta: {x: 1600, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1670520943
@@ -15679,7 +15679,7 @@ Transform:
   m_GameObject: {fileID: 1727348755}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 240}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -16631,7 +16631,7 @@ MonoBehaviour:
   - genre: 8
     minigame: {fileID: 766603948}
   _debugStartFromMinigame: 1
-  _debugGenre: 3
+  _debugGenre: 6
   _debugHiredCharacters:
   - {fileID: 11400000, guid: 996257ea3b2383c4f9a97843dfc3ffc9, type: 2}
   - {fileID: 11400000, guid: dbe03db9ac2d6d845bfe25302325abc3, type: 2}
@@ -17858,7 +17858,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 480}
+  m_AnchoredPosition: {x: 0, y: 509}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1973049013

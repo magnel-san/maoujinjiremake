@@ -26,9 +26,12 @@ namespace DemonLordHR.Minigames
     [SerializeField] private GameObject fistPrefab;
     [Tooltip("こぶしを召喚する位置・向き（未設定ならこのオブジェクトの位置を使う）")]
     [SerializeField] private Transform fistSpawnPoint;
+    [Tooltip("こぶしオブジェクトが自動的に消えるまでの秒数（勇者に当たらなかった場合の保険）")]
     [SerializeField] private float fistLifetime = 1.5f;
     [Tooltip("同時に存在できるこぶしオブジェクトの最大数。連続発火で大量発生するのを防ぐ安全弁。")]
     [SerializeField] private int maxConcurrentFists = 3;
+    [Tooltip("こぶしが前進する速度(m/s)")]
+    [SerializeField] private float fistSpeed = 8f;
 
     [Header("UI")]
     [Tooltip("ゲームオーバーになるまでの距離を示すスクロールバー。ハンドルに勇者アイコンを設定する想定。")]
@@ -62,21 +65,25 @@ namespace DemonLordHR.Minigames
     protected override void OnGestureForMinigame(GestureType type)
     {
       if (type != GestureType.AlternatingPunch) return;
+      SpawnFist(isPractice: false);
+    }
 
-      SpawnFist();
+    /// <summary>練習中の練習用：こぶしは前進して飛んでいくが、勇者に当たってもダメージ・接近度には影響させない。</summary>
+    protected override void OnPracticeGesture(GestureType type)
+    {
+      if (type != GestureType.AlternatingPunch) return;
+      SpawnFist(isPractice: true);
+    }
+
+    /// <summary>こぶしが実際に勇者へ命中した瞬間に呼ばれる（FistProjectile経由）。</summary>
+    private void HandleFistHit()
+    {
       TotalDamage += totalAttackPower;
       HeroProximity01 = Mathf.Clamp01(HeroProximity01 - _heroPushBackPerHit);
       UpdateHeroVisual();
     }
 
-    /// <summary>練習中の練習用：こぶしは飛ばすが、ダメージ・接近度には影響させない。</summary>
-    protected override void OnPracticeGesture(GestureType type)
-    {
-      if (type != GestureType.AlternatingPunch) return;
-      SpawnFist();
-    }
-
-    private void SpawnFist()
+    private void SpawnFist(bool isPractice)
     {
       if (fistPrefab == null) return;
 
@@ -86,7 +93,14 @@ namespace DemonLordHR.Minigames
       var point = fistSpawnPoint != null ? fistSpawnPoint : transform;
       var instance = Instantiate(fistPrefab, point.position, point.rotation);
       _activeFists.Add(instance);
-      Destroy(instance, Mathf.Max(fistLifetime, 0.01f));
+      Destroy(instance, Mathf.Max(fistLifetime, 0.01f)); // 当たらなかった場合の保険としての自動消滅
+
+      var projectile = instance.GetComponent<FistProjectile>();
+      if (projectile != null)
+      {
+        if (isPractice) projectile.Initialize(fistSpeed, null, null);
+        else projectile.Initialize(fistSpeed, heroTransform, HandleFistHit);
+      }
     }
 
     private void UpdateHeroVisual()

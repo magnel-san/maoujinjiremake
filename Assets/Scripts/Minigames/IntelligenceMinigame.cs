@@ -24,6 +24,9 @@ namespace DemonLordHR.Minigames
     [Header("案内線")]
     [Tooltip("正しいなぞり順を示すガイド線。未設定なら実行時に自動生成する。")]
     [SerializeField] private LineRenderer guideLine;
+    [Tooltip("案内線に使うマテリアル。未設定の場合、実行時にURP向けのUnlitマテリアルを自動生成する" +
+      "（Built-in用の\"Sprites/Default\"シェーダーはURPでは正しく描画されず紫/ピンク色になるため使わない）。")]
+    [SerializeField] private Material guideLineMaterial;
     [SerializeField] private float guideLineWidth = 0.03f;
     [SerializeField] private Color guideLineColor = Color.cyan;
 
@@ -113,7 +116,7 @@ namespace DemonLordHR.Minigames
         guideLine.useWorldSpace = true;
         guideLine.loop = true;
         guideLine.widthMultiplier = guideLineWidth;
-        guideLine.material = new Material(Shader.Find("Sprites/Default"));
+        guideLine.material = guideLineMaterial != null ? guideLineMaterial : CreateFallbackLineMaterial();
         guideLine.startColor = guideLineColor;
         guideLine.endColor = guideLineColor;
       }
@@ -125,6 +128,17 @@ namespace DemonLordHR.Minigames
         var node = nodes[PentagramOrder[i]];
         if (node != null) guideLine.SetPosition(i, node.transform.position);
       }
+    }
+
+    /// <summary>guideLineMaterial未設定時のフォールバック。Built-inの"Sprites/Default"はURPでは
+    /// 正しく描画できず紫/ピンク色になってしまうため、URP向けのUnlitシェーダーを優先して探す。
+    /// どれも見つからない場合のみ、最終手段としてSprites/Defaultを使う。</summary>
+    private static Material CreateFallbackLineMaterial()
+    {
+      var shader = Shader.Find("Universal Render Pipeline/Unlit")
+        ?? Shader.Find("Universal Render Pipeline/Particles/Unlit")
+        ?? Shader.Find("Sprites/Default");
+      return shader != null ? new Material(shader) : null;
     }
 
     private void UpdateScoreText()

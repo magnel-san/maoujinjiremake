@@ -43,6 +43,13 @@ namespace DemonLordHR.Minigames
     // （両方動くと走者が二重に召喚されてしまう）。
     protected override bool SkipGenericCharacterSummon => true;
 
+    /// <summary>実際に走る方向（runnerStartPoint→gatePoint）。runnerStartPointの向き(rotation)を
+    /// 手動でgatePoint側に合わせなくても、常に正しい方向を自動的に求める。</summary>
+    private Vector3 RunDirection =>
+      runnerStartPoint != null && gatePoint != null
+        ? (gatePoint.position - runnerStartPoint.position).normalized
+        : Vector3.forward;
+
     protected override void OnRulesShown()
     {
       _runner = PickRandomAssigned();
@@ -94,15 +101,18 @@ namespace DemonLordHR.Minigames
     protected override void OnPracticeGesture(GestureType type)
     {
       if (type != GestureType.ArmSwingBoth || _runnerInstance == null || runnerStartPoint == null) return;
-      _runnerInstance.transform.position = runnerStartPoint.position + runnerStartPoint.forward * practiceBounceDistance;
+      _runnerInstance.transform.position = runnerStartPoint.position + RunDirection * practiceBounceDistance;
     }
 
+    /// <summary>走者をrunnerStartPointの位置に、gatePointの方を向かせて召喚する。runnerStartPoint自体の
+    /// 向き(rotation)には依存しない（向きが移動方向と合っていないと後ろ向きに走っているように見えるため）。</summary>
     private void SpawnRunner()
     {
       if (_runnerInstance != null) Destroy(_runnerInstance);
       if (_runner == null || _runner.characterPrefab == null || runnerStartPoint == null) return;
 
-      _runnerInstance = Instantiate(_runner.characterPrefab, runnerStartPoint.position, runnerStartPoint.rotation);
+      var rotation = gatePoint != null ? Quaternion.LookRotation(RunDirection) : runnerStartPoint.rotation;
+      _runnerInstance = Instantiate(_runner.characterPrefab, runnerStartPoint.position, rotation);
     }
 
     private void UpdateRunnerPosition()
