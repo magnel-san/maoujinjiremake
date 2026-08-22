@@ -57,8 +57,8 @@ namespace DemonLordHR.HandTracking
     [Header("共通しきい値")]
     [Tooltip("同一ジェスチャーの連続発火を防ぐクールダウン秒数")]
     [SerializeField] private float _defaultCooldown = 0.4f;
-    [Tooltip("拳（グー）と判定する、指先→手首の平均距離のしきい値（m）")]
-    [SerializeField] private float _fistDistanceThreshold = 0.09f;
+    [Tooltip("拳（グー）と判定する、指先→手首の平均距離のしきい値（m）。反応しない場合はまずこの値を上げて確認する。")]
+    [SerializeField] private float _fistDistanceThreshold = 0.13f;
     [Tooltip("横に払う（遊泳）で速い動きとみなす速度のしきい値（m/s）。手の位置ベースなので" +
       "画面内に手が収まりやすい遊泳だけこの方式を使う。")]
     [SerializeField] private float _fastVelocityThreshold = 1.2f;
@@ -107,6 +107,14 @@ namespace DemonLordHR.HandTracking
     [Header("耐寒（左右の手を握って左右移動）")]
     [Tooltip("拳（グー）とみなす保持秒数。誤発火防止のため、この秒数だけ握った状態を維持したら発火する")]
     [SerializeField] private float _fistHoldSeconds = 0.15f;
+
+    [Header("デバッグ")]
+    [Tooltip("ONにすると、各ジェスチャーの生の判定値（腕の検出状況・角度・拳距離等）を一定間隔で" +
+      "コンソールに出力する。反応しない原因を実機で特定するために使う。")]
+    [SerializeField] private bool _debugLogGestureState;
+    [SerializeField] private float _debugLogInterval = 0.5f;
+
+    private float _debugLogTimer;
 
     public event Action<GestureType> OnGestureDetected;
 
@@ -595,6 +603,30 @@ namespace DemonLordHR.HandTracking
       // 翼ばたき・両腕振り・ハンマー・パンチは、手だけより振りの大きい動きに強い
       // 上腕トラッキング(PoseTrackingController)側、HandlePoseResultから駆動する。
       DetectHandsTogether(dt);
+
+      DebugLogGestureState();
+    }
+
+    /// <summary>反応しない原因を実機で切り分けるための診断ログ。_debugLogGestureStateがONの間、
+    /// 一定間隔で「今どんな値になっているか」をコンソールに出す。しきい値と見比べて、
+    /// どの条件が満たされていないか（腕自体が検出できていないのか、数値が閾値に届いていないだけなのか）を判断できる。</summary>
+    private void DebugLogGestureState()
+    {
+      if (!_debugLogGestureState) return;
+      _debugLogTimer -= Time.deltaTime;
+      if (_debugLogTimer > 0f) return;
+      _debugLogTimer = Mathf.Max(_debugLogInterval, 0.05f);
+
+      var rightFistDist = _right.valid ? _right.AverageFistDistance().ToString("F3") : "N/A";
+      var leftFistDist = _left.valid ? _left.AverageFistDistance().ToString("F3") : "N/A";
+      var rightForearm = _pose.rightArmValid ? ForearmAngleFromHorizontal(_pose.rightElbowViewport, _pose.rightWristViewport).ToString("F1") : "N/A";
+      var leftForearm = _pose.leftArmValid ? ForearmAngleFromHorizontal(_pose.leftElbowViewport, _pose.leftWristViewport).ToString("F1") : "N/A";
+
+      Debug.Log($"[GestureDebug] Hand: R.valid={_right.valid} fistDist={rightFistDist}(閾値{_fistDistanceThreshold}) | " +
+        $"L.valid={_left.valid} fistDist={leftFistDist}");
+      Debug.Log($"[GestureDebug] Pose: R.armValid={_pose.rightArmValid} elbowAngle={(_pose.rightArmValid ? _pose.rightElbowAngle.ToString("F1") : "N/A")} " +
+        $"forearmAngle={rightForearm}(垂直しきい値{_punchVerticalMinAngle}) wristY={(_pose.rightArmValid ? _pose.rightWristViewport.y.ToString("F2") : "N/A")}(振上しきい値{_poseHammerRaisedViewportY}) | " +
+        $"L.armValid={_pose.leftArmValid} elbowAngle={(_pose.leftArmValid ? _pose.leftElbowAngle.ToString("F1") : "N/A")} forearmAngle={leftForearm} wristY={(_pose.leftArmValid ? _pose.leftWristViewport.y.ToString("F2") : "N/A")}");
     }
 
     private bool TryFire(GestureType type)

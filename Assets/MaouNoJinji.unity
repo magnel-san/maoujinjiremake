@@ -6252,7 +6252,7 @@ MonoBehaviour:
   _filterMinCutoff: 1
   _filterBeta: 0.5
   _defaultCooldown: 0.4
-  _fistDistanceThreshold: 0.09
+  _fistDistanceThreshold: 0.13
   _fastVelocityThreshold: 1.2
   _touchDistanceThreshold: 0.04
   _handsTogetherHoldSeconds: 0.3
@@ -6268,6 +6268,8 @@ MonoBehaviour:
   _poseHammerRaisedViewportY: 0.55
   _hammerHandsTogetherMaxDistance: 0.15
   _fistHoldSeconds: 0.15
+  _debugLogGestureState: 1
+  _debugLogInterval: 0.5
 --- !u!114 &681877492
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13458,7 +13460,7 @@ MonoBehaviour:
   - {fileID: 967927365}
   - {fileID: 142272012}
   guideLine: {fileID: 1458497525}
-  guideLineMaterial: {fileID: 0}
+  guideLineMaterial: {fileID: 2100000, guid: df5945c4aa1666449849f9707fd34786, type: 2}
   guideLineWidth: 5
   guideLineColor: {r: 0, g: 1, b: 1, a: 1}
   scoreText: {fileID: 1705814427}
