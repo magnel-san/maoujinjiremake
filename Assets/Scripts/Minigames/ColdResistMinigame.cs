@@ -7,16 +7,24 @@ using UnityEngine;
 namespace DemonLordHR.Minigames
 {
   /// <summary>
-  /// 【耐寒】仕様4.8：3レーン上で「右手を握る(グー)→右移動」「左手を握る(グー)→左移動」でレーン移動し、
-  /// 飛んでくる氷塊を回避する。上腕トラッキング(PoseTrackingController)を使わず、手の形（静止ポーズ）
-  /// だけで判定するため、肩・肘のカメラフレーミングに依存しない。左右どちらの手を握ったかで
-  /// 移動方向が決まるため、両方向が同時に誤発火することもない。
+  /// 【耐寒】仕様4.8：3レーン上でレーン移動し、飛んでくる氷塊を回避する。
+  /// モーション（手の形）判定は精度が安定しなかったため廃止し、代わりに人差し指先の
+  /// カーソル位置（画面を縦に3分割した際、どのゾーンを指しているか）に応じて、
+  /// 中央キャラの立ち位置がそのゾーンへ常に追従する方式にしている
+  /// （ジェスチャーの発火待ちではなく、毎フレーム指の位置でレーンを決め直す）。
   /// 採用キャラは中央レーンに配置してスタートする。被弾した場合は即ゲームオーバーにはせず、
   /// 数秒のスタン（その間はレーン移動できない）というペナルティにしている。
   /// </summary>
   public class ColdResistMinigame : MinigameBase
   {
     public const int LaneCount = 3;
+
+    [Header("カーソル追従")]
+    [Tooltip("人差し指先のビューポート座標を取得するための参照。画面を縦に3分割し、" +
+      "指しているゾーン（左/中央/右）へ常時レーンを合わせる。")]
+    [SerializeField] private HandTrackingController handTrackingController;
+    [Tooltip("どちらの手を優先してカーソルに使うか。指定した手が検出されていない場合はもう片方にフォールバックする。")]
+    [SerializeField] private bool useRightHandForCursor = true;
 
     [Header("走者・レーン")]
     [Tooltip("各レーンの立ち位置。[0]=左, [1]=中央, [2]=右")]
@@ -53,6 +61,7 @@ namespace DemonLordHR.Minigames
     private readonly List<(Transform transform, int lane, Vector3 direction, bool judged)> _iceChunks = new List<(Transform, int, Vector3, bool)>();
     private float _spawnTimer;
     private float _stunTimer;
+    private bool _cursorTrackingEnabled;
 
     public int CurrentLane { get; private set; } = 1; // 0=左,1=中央,2=右
     public float Score { get; private set; }
@@ -67,6 +76,7 @@ namespace DemonLordHR.Minigames
       _defender = PickRandomAssigned();
       SpawnDefender();
       RefreshRemainingLineup();
+      _cursorTrackingEnabled = true; // 練習中もカーソル追従でレーン移動を試せるようにする
     }
 
     protected override void OnMinigameStart()
@@ -103,10 +113,31 @@ namespace DemonLordHR.Minigames
 
     protected override void OnMinigameEnd(MinigameResult finalResult)
     {
+      _cursorTrackingEnabled = false;
       ClearIceChunks();
       if (_defenderInstance != null) Destroy(_defenderInstance);
       _defenderInstance = null;
       DespawnLineup(_remainingLineup);
+    }
+
+    private void Update()
+    {
+      if (!_cursorTrackingEnabled || IsStunned) return;
+      UpdateLaneFromCursor();
+    }
+
+    /// <summary>人差し指先のビューポートX座標（0=左端, 1=右端）を画面の縦3分割ゾーンに変換し、
+    /// そのゾーンへ常時レーンを合わせる。指が検出できていない間は直前のレーンを維持する。</summary>
+    private void UpdateLaneFromCursor()
+    {
+      if (handTrackingController == null) return;
+      if (!handTrackingController.TryGetIndexFingertipViewport(useRightHandForCursor, out var viewport)) return;
+
+      var lane = viewport.x < (1f / 3f) ? 0 : viewport.x > (2f / 3f) ? 2 : 1;
+      if (lane == CurrentLane) return;
+
+      CurrentLane = lane;
+      UpdateDefenderPosition();
     }
 
     /// <summary>中央レーンに立つ1体以外の採用キャラを整列し直す（前回の召喚が残っていれば片付けてから再召喚する）。</summary>
@@ -116,38 +147,9 @@ namespace DemonLordHR.Minigames
       _remainingLineup.AddRange(SpawnRemainingLineup(_defender, remainingLineupOrigin, remainingLineupAxis, remainingLineupSpacing));
     }
 
-    protected override void OnGestureForMinigame(GestureType type)
-    {
-      if (IsStunned) return; // スタン中はレーン移動できない
-
-      switch (type)
-      {
-        case GestureType.LeftHandFist:
-          CurrentLane = Mathf.Max(0, CurrentLane - 1);
-          UpdateDefenderPosition();
-          break;
-        case GestureType.RightHandFist:
-          CurrentLane = Mathf.Min(LaneCount - 1, CurrentLane + 1);
-          UpdateDefenderPosition();
-          break;
-      }
-    }
-
-    /// <summary>練習中もレーン移動自体は試せるようにする（氷塊は出ないので被弾しない）。</summary>
-    protected override void OnPracticeGesture(GestureType type)
-    {
-      switch (type)
-      {
-        case GestureType.LeftHandFist:
-          CurrentLane = Mathf.Max(0, CurrentLane - 1);
-          UpdateDefenderPosition();
-          break;
-        case GestureType.RightHandFist:
-          CurrentLane = Mathf.Min(LaneCount - 1, CurrentLane + 1);
-          UpdateDefenderPosition();
-          break;
-      }
-    }
+    /// <summary>レーン移動は<see cref="UpdateLaneFromCursor"/>によるカーソル追従のみで行うため、
+    /// ジェスチャー購読は使わない。</summary>
+    protected override void OnGestureForMinigame(GestureType type) { }
 
     private void SpawnDefender()
     {

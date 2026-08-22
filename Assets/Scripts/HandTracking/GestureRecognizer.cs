@@ -100,11 +100,12 @@ namespace DemonLordHR.HandTracking
     [SerializeField] private float _armSwingSpeedThreshold = 0.4f;
     [Tooltip("労働はがばがば判定でよいため低めにしてある。")]
     [SerializeField] private float _hammerSpeedThreshold = 0.4f;
-    [Tooltip("ハンマーの「振り上げ済み」とみなす、上腕トラッキング側の画面内の高さ（0=下端 1=上端）")]
-    [SerializeField, Range(0f, 1f)] private float _poseHammerRaisedViewportY = 0.4f;
+    [Tooltip("ハンマーの「振り上げ済み」とみなす、上腕トラッキング側の画面内の高さ（0=下端 1=上端）。" +
+      "実機ログで直前中点Yが0.39までしか上がらず0.4の閾値にほぼ届いていなかったため下げた。")]
+    [SerializeField, Range(0f, 1f)] private float _poseHammerRaisedViewportY = 0.25f;
     [Tooltip("労働のハンマーは両手を合わせて振り下ろす動作のため、両手首がこの距離以内（画面内比率）に" +
       "近づいている間だけ「両手を合わせている」とみなす。がばがば判定でよいため広めにしてある。")]
-    [SerializeField] private float _hammerHandsTogetherMaxDistance = 0.3f;
+    [SerializeField] private float _hammerHandsTogetherMaxDistance = 0.4f;
 
     [Header("耐寒（左右の手を握って左右移動）")]
     [Tooltip("拳（グー）とみなす保持秒数。誤発火防止のため、この秒数だけ握った状態を維持したら発火する")]
@@ -631,6 +632,27 @@ namespace DemonLordHR.HandTracking
       Debug.Log($"[GestureDebug] Pose: R.armValid={_pose.rightArmValid} elbowAngle={(_pose.rightArmValid ? _pose.rightElbowAngle.ToString("F1") : "N/A")} " +
         $"forearmAngle={rightForearm}(垂直しきい値{_punchVerticalMinAngle}) wristY={(_pose.rightArmValid ? _pose.rightWristViewport.y.ToString("F2") : "N/A")}(振上しきい値{_poseHammerRaisedViewportY}) | " +
         $"L.armValid={_pose.leftArmValid} elbowAngle={(_pose.leftArmValid ? _pose.leftElbowAngle.ToString("F1") : "N/A")} forearmAngle={leftForearm} wristY={(_pose.leftArmValid ? _pose.leftWristViewport.y.ToString("F2") : "N/A")}");
+
+      // Sprint(ArmSwingBoth)・Labor(HammerSwingDown)は前フレームとの差分（速度）で判定するため、
+      // 静的なスナップショットだけでは反応しない原因が分からない。ここで実際に判定に使っている
+      // 特徴量そのものをログに出す。
+      if (_pose.rightArmValid && _prevPose.rightArmValid && _pose.leftArmValid && _prevPose.leftArmValid)
+      {
+        var dt = PoseDt();
+        var rv = Mathf.Abs((_pose.rightWristViewport.y - _prevPose.rightWristViewport.y) / dt);
+        var lv = Mathf.Abs((_pose.leftWristViewport.y - _prevPose.leftWristViewport.y) / dt);
+        var swingFeature = Mathf.Max(rv, lv);
+
+        var wrist = (_pose.rightWristViewport + _pose.leftWristViewport) * 0.5f;
+        var prevWrist = (_prevPose.rightWristViewport + _prevPose.leftWristViewport) * 0.5f;
+        var downwardSpeed = Mathf.Max(-((wrist.y - prevWrist.y) / dt), 0f);
+        var wasRaised = prevWrist.y > _poseHammerRaisedViewportY;
+        var handsTogetherDistPose = Vector2.Distance(_prevPose.rightWristViewport, _prevPose.leftWristViewport);
+
+        Debug.Log($"[GestureDebug] Swing: 両腕振り速度={swingFeature:F2}(閾値{_armSwingSpeedThreshold}) | " +
+          $"ハンマー下降速度={downwardSpeed:F2}(閾値{_hammerSpeedThreshold}) 振上済み={wasRaised}(直前中点Y={prevWrist.y:F2}/閾値{_poseHammerRaisedViewportY}) " +
+          $"両手接近={handsTogetherDistPose:F2}(閾値{_hammerHandsTogetherMaxDistance})");
+      }
     }
 
     private bool TryFire(GestureType type)
