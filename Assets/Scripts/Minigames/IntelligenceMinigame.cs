@@ -104,6 +104,9 @@ namespace DemonLordHR.Minigames
       ResetTrace();
     }
 
+    /// <summary>両手を合わせた（成功・失敗いずれの場合も）際に呼ぶ、状態の完全リセット。
+    /// なぞり進捗を0に戻すだけでなく、各ノードの色をidleへ戻し、案内線も引き直して
+    /// 常に「今から新しく始める」見た目にする。</summary>
     private void ResetTrace()
     {
       _nextExpectedStep = 0;
@@ -112,6 +115,7 @@ namespace DemonLordHR.Minigames
       {
         node?.ResetNode();
       }
+      DrawGuideLine();
     }
 
     private void DrawGuideLine()

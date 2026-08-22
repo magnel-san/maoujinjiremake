@@ -70,7 +70,7 @@ namespace DemonLordHR.Minigames
     {
       _connected = false;
       _heldSeconds = 0f;
-      ApplyColor(_isHovering ? _hoverColor : _idleColor);
+      ApplyColor(_idleColor);
     }
 
     private void ApplyColor(Color color)
