@@ -12,8 +12,8 @@ GameObject:
   - component: {fileID: 2049107615931506391}
   - component: {fileID: 9066901520465666403}
   - component: {fileID: 1722266989092659006}
-  - component: {fileID: 227830595255211067}
   - component: {fileID: -7757588695297496814}
+  - component: {fileID: -223918349917835890}
   m_Layer: 0
   m_Name: wave 1
   m_TagString: Untagged
@@ -114,19 +114,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &227830595255211067
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5210888286727183698}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8bec8ddea27e2a64a9c9f2434e00f72c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Minigames.WaveProjectile
-  speed: 5
 --- !u!54 &-7757588695297496814
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -154,3 +141,16 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &-223918349917835890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5210888286727183698}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 416c2f265e804c14b85fc0bea9b7c575, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Minigames.FistProjectile
+  speed: 8
