@@ -977,7 +977,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Minigames.MagicCircleNode
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
-  nodeIndex: 0
+  nodeIndex: 4
   _renderer: {fileID: 0}
   _idleColor: {r: 1, g: 1, b: 1, a: 1}
   _hoverColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
@@ -3271,7 +3271,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Minigames.MagicCircleNode
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
-  nodeIndex: 0
+  nodeIndex: 1
   _renderer: {fileID: 0}
   _idleColor: {r: 1, g: 1, b: 1, a: 1}
   _hoverColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
@@ -8640,7 +8640,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Minigames.MagicCircleNode
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
-  nodeIndex: 0
+  nodeIndex: 3
   _renderer: {fileID: 0}
   _idleColor: {r: 1, g: 1, b: 1, a: 1}
   _hoverColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
@@ -12256,7 +12256,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Minigames.MagicCircleNode
   _minigame: {fileID: 1458497524}
   _connectHoldSeconds: 0.5
-  nodeIndex: 0
+  nodeIndex: 2
   _renderer: {fileID: 0}
   _idleColor: {r: 1, g: 1, b: 1, a: 1}
   _hoverColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
