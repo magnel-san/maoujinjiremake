@@ -62,8 +62,8 @@ namespace DemonLordHR.HandTracking
     [Tooltip("横に払う（遊泳）で速い動きとみなす速度のしきい値（m/s）。手の位置ベースなので" +
       "画面内に手が収まりやすい遊泳だけこの方式を使う。")]
     [SerializeField] private float _fastVelocityThreshold = 1.2f;
-    [Tooltip("近接（タッチ等）とみなす距離のしきい値（m）")]
-    [SerializeField] private float _touchDistanceThreshold = 0.04f;
+    [Tooltip("近接（タッチ等）とみなす距離のしきい値（m）。反応しない場合はまずこの値を上げて確認する。")]
+    [SerializeField] private float _touchDistanceThreshold = 0.06f;
     [Tooltip("HandsTogether判定に必要な保持秒数")]
     [SerializeField] private float _handsTogetherHoldSeconds = 0.3f;
     [Tooltip("片手操作のジェスチャー（横払い・ハンマー）で、動いていない方の手にたまたま判定を奪われないための" +
@@ -624,8 +624,10 @@ namespace DemonLordHR.HandTracking
       var rightForearm = _pose.rightArmValid ? ForearmAngleFromHorizontal(_pose.rightElbowViewport, _pose.rightWristViewport).ToString("F1") : "N/A";
       var leftForearm = _pose.leftArmValid ? ForearmAngleFromHorizontal(_pose.leftElbowViewport, _pose.leftWristViewport).ToString("F1") : "N/A";
 
+      var handsTogetherDist = _left.valid && _right.valid ? Vector3.Distance(_left.wrist, _right.wrist).ToString("F3") : "N/A";
+
       Debug.Log($"[GestureDebug] Hand: R.valid={_right.valid} fistDist={rightFistDist}(閾値{_fistDistanceThreshold}) | " +
-        $"L.valid={_left.valid} fistDist={leftFistDist}");
+        $"L.valid={_left.valid} fistDist={leftFistDist} | HandsTogether距離={handsTogetherDist}(閾値{_touchDistanceThreshold * 2f})");
       Debug.Log($"[GestureDebug] Pose: R.armValid={_pose.rightArmValid} elbowAngle={(_pose.rightArmValid ? _pose.rightElbowAngle.ToString("F1") : "N/A")} " +
         $"forearmAngle={rightForearm}(垂直しきい値{_punchVerticalMinAngle}) wristY={(_pose.rightArmValid ? _pose.rightWristViewport.y.ToString("F2") : "N/A")}(振上しきい値{_poseHammerRaisedViewportY}) | " +
         $"L.armValid={_pose.leftArmValid} elbowAngle={(_pose.leftArmValid ? _pose.leftElbowAngle.ToString("F1") : "N/A")} forearmAngle={leftForearm} wristY={(_pose.leftArmValid ? _pose.leftWristViewport.y.ToString("F2") : "N/A")}");

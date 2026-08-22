@@ -72,11 +72,13 @@ namespace DemonLordHR.Minigames
       if (_nextExpectedStep < PentagramOrder.Length && nodeIndex == PentagramOrder[_nextExpectedStep])
       {
         _nextExpectedStep++;
+        Debug.Log($"[Intelligence] node {nodeIndex} 正解（{_nextExpectedStep}/{PentagramOrder.Length}）");
       }
       else
       {
         // すぐには失敗にせず、両手を合わせた時点で判定する（ミスに気付いてもそこで終わりにしない）。
         _mistakeMade = true;
+        Debug.Log($"[Intelligence] node {nodeIndex} ミス（次に期待していたのは {(_nextExpectedStep < PentagramOrder.Length ? PentagramOrder[_nextExpectedStep].ToString() : "なし（既に全部触れている）")}）");
       }
     }
 
@@ -84,11 +86,19 @@ namespace DemonLordHR.Minigames
     {
       if (type != GestureType.HandsTogether) return;
 
+      // HandsTogether自体は届いているが、ゲーム内で何も起きていないように見える場合の切り分け用ログ。
+      Debug.Log($"[Intelligence] HandsTogether受信: 進捗={_nextExpectedStep}/{PentagramOrder.Length} ミス={_mistakeMade}");
+
       if (!_mistakeMade && _nextExpectedStep >= PentagramOrder.Length)
       {
         Score += totalAttackPower;
         CompletionCount++;
         UpdateScoreText();
+        Debug.Log($"[Intelligence] 成功！ スコア+{totalAttackPower} 合計={Score}");
+      }
+      else
+      {
+        Debug.Log("[Intelligence] 不成立のためリセット（順番を最後まで正しく触れていない）");
       }
 
       ResetTrace();

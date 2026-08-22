@@ -6254,7 +6254,7 @@ MonoBehaviour:
   _defaultCooldown: 0.4
   _fistDistanceThreshold: 0.17
   _fastVelocityThreshold: 1.2
-  _touchDistanceThreshold: 0.04
+  _touchDistanceThreshold: 0.06
   _handsTogetherHoldSeconds: 0.3
   _offHandSuppressionRatio: 1.3
   _punchVerticalMinAngle: 45
