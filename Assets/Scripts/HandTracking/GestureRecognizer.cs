@@ -58,7 +58,7 @@ namespace DemonLordHR.HandTracking
     [Tooltip("同一ジェスチャーの連続発火を防ぐクールダウン秒数")]
     [SerializeField] private float _defaultCooldown = 0.4f;
     [Tooltip("拳（グー）と判定する、指先→手首の平均距離のしきい値（m）。反応しない場合はまずこの値を上げて確認する。")]
-    [SerializeField] private float _fistDistanceThreshold = 0.13f;
+    [SerializeField] private float _fistDistanceThreshold = 0.17f;
     [Tooltip("横に払う（遊泳）で速い動きとみなす速度のしきい値（m/s）。手の位置ベースなので" +
       "画面内に手が収まりやすい遊泳だけこの方式を使う。")]
     [SerializeField] private float _fastVelocityThreshold = 1.2f;
@@ -96,13 +96,15 @@ namespace DemonLordHR.HandTracking
       "手だけを追う方式より振りの大きいジェスチャーで画面外に出てロストしにくくする。" +
       "3つとも動きの質が違うため、それぞれ個別の閾値にしている（反応しない場合はまずこの値を下げて確認する）。")]
     [SerializeField] private float _wingFlapSpeedThreshold = 1.0f;
-    [SerializeField] private float _armSwingSpeedThreshold = 1.0f;
-    [SerializeField] private float _hammerSpeedThreshold = 1.0f;
+    [Tooltip("俊足はがばがば判定でよいため低めにしてある。")]
+    [SerializeField] private float _armSwingSpeedThreshold = 0.4f;
+    [Tooltip("労働はがばがば判定でよいため低めにしてある。")]
+    [SerializeField] private float _hammerSpeedThreshold = 0.4f;
     [Tooltip("ハンマーの「振り上げ済み」とみなす、上腕トラッキング側の画面内の高さ（0=下端 1=上端）")]
-    [SerializeField, Range(0f, 1f)] private float _poseHammerRaisedViewportY = 0.55f;
+    [SerializeField, Range(0f, 1f)] private float _poseHammerRaisedViewportY = 0.4f;
     [Tooltip("労働のハンマーは両手を合わせて振り下ろす動作のため、両手首がこの距離以内（画面内比率）に" +
-      "近づいている間だけ「両手を合わせている」とみなす。")]
-    [SerializeField] private float _hammerHandsTogetherMaxDistance = 0.15f;
+      "近づいている間だけ「両手を合わせている」とみなす。がばがば判定でよいため広めにしてある。")]
+    [SerializeField] private float _hammerHandsTogetherMaxDistance = 0.3f;
 
     [Header("耐寒（左右の手を握って左右移動）")]
     [Tooltip("拳（グー）とみなす保持秒数。誤発火防止のため、この秒数だけ握った状態を維持したら発火する")]
@@ -697,22 +699,21 @@ namespace DemonLordHR.HandTracking
       }
     }
 
-    // 両腕を振る（俊足、上腕ベース）：ランニングの腕振りは左右が逆位相（片方が上がる時もう片方は下がる）
-    // で動くため、翼ばたき（同位相）とは逆に、両手首の縦方向速度の符号が逆の場合だけ受け付ける。
-    // 前後(Z)方向はMediaPipeが苦手とする軸のため使わず、上下方向の速度だけを見る。
+    // 両腕を振る（俊足、上腕ベース）：がばがば判定でよいため、左右の位相が揃っているか等は問わず、
+    // どちらか片方の手首が縦方向に速く動いていればそれだけで受け付ける（前後(Z)方向は
+    // MediaPipeが苦手とする軸のため使わず、上下方向の速度だけを見る）。
     private void DetectArmSwingBothPose()
     {
-      if (!_pose.rightArmValid || !_pose.leftArmValid || !_prevPose.rightArmValid || !_prevPose.leftArmValid)
+      if (!_pose.rightArmValid && !_pose.leftArmValid)
       {
         _armSwingDetector.Reset();
         return;
       }
 
       var dt = PoseDt();
-      var rv = (_pose.rightWristViewport.y - _prevPose.rightWristViewport.y) / dt;
-      var lv = (_pose.leftWristViewport.y - _prevPose.leftWristViewport.y) / dt;
-      var opposite = Mathf.Sign(lv) != Mathf.Sign(rv);
-      var feature = opposite ? Mathf.Min(Mathf.Abs(lv), Mathf.Abs(rv)) : 0f;
+      var rv = _pose.rightArmValid && _prevPose.rightArmValid ? Mathf.Abs((_pose.rightWristViewport.y - _prevPose.rightWristViewport.y) / dt) : 0f;
+      var lv = _pose.leftArmValid && _prevPose.leftArmValid ? Mathf.Abs((_pose.leftWristViewport.y - _prevPose.leftWristViewport.y) / dt) : 0f;
+      var feature = Mathf.Max(rv, lv);
 
       if (_armSwingDetector.Update(feature))
       {
@@ -723,6 +724,7 @@ namespace DemonLordHR.HandTracking
     // 腕を振り下ろす（労働・ハンマー打ち、上腕ベース）：両手を合わせてハンマーを持つイメージの動作のため、
     // 片手ずつではなく両手首の中点を1つの「手の位置」として扱う。振り上げていた中点位置が急速に下降し、
     // 下降速度がピークを迎えた瞬間を1回とする。両手が離れている間（合わせていない間）は受け付けない。
+    // がばがば判定でよいため、縦方向優勢かどうかは問わない。
     private void DetectHammerSwingDownPose()
     {
       if (!_pose.rightArmValid || !_pose.leftArmValid || !_prevPose.rightArmValid || !_prevPose.leftArmValid)
@@ -736,13 +738,10 @@ namespace DemonLordHR.HandTracking
       var prevWrist = (_prevPose.rightWristViewport + _prevPose.leftWristViewport) * 0.5f;
 
       var velY = (wrist.y - prevWrist.y) / dt;
-      var velX = (wrist.x - prevWrist.x) / dt;
       var downwardSpeed = Mathf.Max(-velY, 0f);
       var wasRaised = prevWrist.y > _poseHammerRaisedViewportY;
-      // 縦方向優勢（横方向より下向きが勝っている）動きだけをハンマーとして受け付ける。
-      var dominantlyVertical = Mathf.Abs(velY) >= Mathf.Abs(velX);
       var handsTogether = Vector2.Distance(_prevPose.rightWristViewport, _prevPose.leftWristViewport) <= _hammerHandsTogetherMaxDistance;
-      var canEnter = wasRaised && dominantlyVertical && handsTogether;
+      var canEnter = wasRaised && handsTogether;
 
       if (_hammerDetector.Update(downwardSpeed, canEnter))
       {

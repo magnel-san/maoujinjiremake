@@ -6252,7 +6252,7 @@ MonoBehaviour:
   _filterMinCutoff: 1
   _filterBeta: 0.5
   _defaultCooldown: 0.4
-  _fistDistanceThreshold: 0.13
+  _fistDistanceThreshold: 0.17
   _fastVelocityThreshold: 1.2
   _touchDistanceThreshold: 0.04
   _handsTogetherHoldSeconds: 0.3
@@ -6263,10 +6263,10 @@ MonoBehaviour:
   _punchMinAngleDecrease: 35
   _swingExitRatio: 0.35
   _wingFlapSpeedThreshold: 1
-  _armSwingSpeedThreshold: 1
-  _hammerSpeedThreshold: 1
-  _poseHammerRaisedViewportY: 0.55
-  _hammerHandsTogetherMaxDistance: 0.15
+  _armSwingSpeedThreshold: 0.4
+  _hammerSpeedThreshold: 0.4
+  _poseHammerRaisedViewportY: 0.4
+  _hammerHandsTogetherMaxDistance: 0.3
   _fistHoldSeconds: 0.15
   _debugLogGestureState: 1
   _debugLogInterval: 0.5
