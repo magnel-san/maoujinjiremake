@@ -62,8 +62,11 @@ namespace DemonLordHR.HandTracking
     [Tooltip("横に払う（遊泳）で速い動きとみなす速度のしきい値（m/s）。手の位置ベースなので" +
       "画面内に手が収まりやすい遊泳だけこの方式を使う。")]
     [SerializeField] private float _fastVelocityThreshold = 1.2f;
-    [Tooltip("近接（タッチ等）とみなす距離のしきい値（m）。反応しない場合はまずこの値を上げて確認する。")]
-    [SerializeField] private float _touchDistanceThreshold = 0.06f;
+    [Tooltip("両手を合わせたとみなす、上腕トラッキング側の手首間距離のしきい値（画面内比率）。" +
+      "両手を実際に合わせる（接触させる）と手同士が重なってHandLandmarker側の検出が" +
+      "片方だけ途切れることが多く判定できないため、より遮蔽に強いPoseTrackingController側の" +
+      "手首位置で判定する。反応しない場合はまずこの値を上げて確認する。")]
+    [SerializeField] private float _poseHandsTogetherMaxDistance = 0.15f;
     [Tooltip("HandsTogether判定に必要な保持秒数")]
     [SerializeField] private float _handsTogetherHoldSeconds = 0.3f;
     [Tooltip("片手操作のジェスチャー（横払い・ハンマー）で、動いていない方の手にたまたま判定を奪われないための" +
@@ -487,6 +490,7 @@ namespace DemonLordHR.HandTracking
       DetectWingFlapPose();
       DetectArmSwingBothPose();
       DetectHammerSwingDownPose();
+      DetectHandsTogetherPose(PoseDt());
     }
 
     private float PoseDt() => Mathf.Max(_pose.timestamp - _prevPose.timestamp, 0.0001f);
@@ -603,9 +607,8 @@ namespace DemonLordHR.HandTracking
 
       DetectHorizontalSwipes(dt);
       DetectFistHold(dt);
-      // 翼ばたき・両腕振り・ハンマー・パンチは、手だけより振りの大きい動きに強い
+      // 翼ばたき・両腕振り・ハンマー・パンチ・両手合わせは、手だけより遮蔽・ロストに強い
       // 上腕トラッキング(PoseTrackingController)側、HandlePoseResultから駆動する。
-      DetectHandsTogether(dt);
 
       DebugLogGestureState();
     }
@@ -625,10 +628,12 @@ namespace DemonLordHR.HandTracking
       var rightForearm = _pose.rightArmValid ? ForearmAngleFromHorizontal(_pose.rightElbowViewport, _pose.rightWristViewport).ToString("F1") : "N/A";
       var leftForearm = _pose.leftArmValid ? ForearmAngleFromHorizontal(_pose.leftElbowViewport, _pose.leftWristViewport).ToString("F1") : "N/A";
 
-      var handsTogetherDist = _left.valid && _right.valid ? Vector3.Distance(_left.wrist, _right.wrist).ToString("F3") : "N/A";
+      var handsTogetherDist = _pose.rightArmValid && _pose.leftArmValid
+        ? Vector2.Distance(_pose.rightWristViewport, _pose.leftWristViewport).ToString("F3")
+        : "N/A";
 
       Debug.Log($"[GestureDebug] Hand: R.valid={_right.valid} fistDist={rightFistDist}(閾値{_fistDistanceThreshold}) | " +
-        $"L.valid={_left.valid} fistDist={leftFistDist} | HandsTogether距離={handsTogetherDist}(閾値{_touchDistanceThreshold * 2f})");
+        $"L.valid={_left.valid} fistDist={leftFistDist} | HandsTogether距離(Pose手首)={handsTogetherDist}(閾値{_poseHandsTogetherMaxDistance})");
       Debug.Log($"[GestureDebug] Pose: R.armValid={_pose.rightArmValid} elbowAngle={(_pose.rightArmValid ? _pose.rightElbowAngle.ToString("F1") : "N/A")} " +
         $"forearmAngle={rightForearm}(垂直しきい値{_punchVerticalMinAngle}) wristY={(_pose.rightArmValid ? _pose.rightWristViewport.y.ToString("F2") : "N/A")}(振上しきい値{_poseHammerRaisedViewportY}) | " +
         $"L.armValid={_pose.leftArmValid} elbowAngle={(_pose.leftArmValid ? _pose.leftElbowAngle.ToString("F1") : "N/A")} forearmAngle={leftForearm} wristY={(_pose.leftArmValid ? _pose.leftWristViewport.y.ToString("F2") : "N/A")}");
@@ -857,17 +862,20 @@ namespace DemonLordHR.HandTracking
 
     // 両手を前で合わせる：両手首が近接した状態を一定時間保持。
     // 保持時間(dwell)＋崩れるまで再発火しない(release)方式で連続発火を防ぐ。
-    private void DetectHandsTogether(float dt)
+    // HandLandmarker側（手指の細かい検出）は、両手を実際に接触させると片方の手が
+    // 重なって隠れ検出が途切れやすいため使わず、遮蔽に強いPoseTrackingController側の
+    // 手首位置（画面内比率）で判定する。そのためHandlePoseResultから駆動する。
+    private void DetectHandsTogetherPose(float dt)
     {
-      if (!_left.valid || !_right.valid)
+      if (!_pose.rightArmValid || !_pose.leftArmValid)
       {
         _handsTogetherTimer = 0f;
         _handsTogetherArmed = true;
         return;
       }
 
-      var dist = Vector3.Distance(_left.wrist, _right.wrist);
-      if (dist < _touchDistanceThreshold * 2f)
+      var dist = Vector2.Distance(_pose.rightWristViewport, _pose.leftWristViewport);
+      if (dist < _poseHandsTogetherMaxDistance)
       {
         _handsTogetherTimer += dt;
         if (_handsTogetherArmed && _handsTogetherTimer >= _handsTogetherHoldSeconds)

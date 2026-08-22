@@ -5066,6 +5066,8 @@ MonoBehaviour:
   attackPowerText: {fileID: 1427167140}
   ruleImageRoot: {fileID: 361418258}
   timerText: {fileID: 1997794419}
+  handTrackingController: {fileID: 681877492}
+  useRightHandForCursor: 1
   lanePositions:
   - {fileID: 599317646}
   - {fileID: 1870787890}
@@ -6254,7 +6256,7 @@ MonoBehaviour:
   _defaultCooldown: 0.4
   _fistDistanceThreshold: 0.17
   _fastVelocityThreshold: 1.2
-  _touchDistanceThreshold: 0.06
+  _poseHandsTogetherMaxDistance: 0.15
   _handsTogetherHoldSeconds: 0.3
   _offHandSuppressionRatio: 1.3
   _punchVerticalMinAngle: 45
@@ -6265,8 +6267,8 @@ MonoBehaviour:
   _wingFlapSpeedThreshold: 1
   _armSwingSpeedThreshold: 0.4
   _hammerSpeedThreshold: 0.4
-  _poseHammerRaisedViewportY: 0.4
-  _hammerHandsTogetherMaxDistance: 0.3
+  _poseHammerRaisedViewportY: 0.25
+  _hammerHandsTogetherMaxDistance: 0.4
   _fistHoldSeconds: 0.15
   _debugLogGestureState: 1
   _debugLogInterval: 0.5
