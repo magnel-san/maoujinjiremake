@@ -45,6 +45,7 @@ namespace DemonLordHR.Minigames
     private readonly List<GameObject> _remainingLineup = new List<GameObject>();
     private bool _practiceActive;
     private float _boostSpeed;
+    private Vector3 _baseCameraPosition;
 
     public float DistanceTravelled { get; private set; }
 
@@ -61,6 +62,11 @@ namespace DemonLordHR.Minigames
 
     protected override void OnRulesShown()
     {
+      // この時点でplayerRoot(カメラ)はMinigameBaseのワープ処理により既にwarpTargetの位置にいるため、
+      // それを「追従の基準位置」として覚えておく。以降は走者がrunnerStartPointから動いた分だけ
+      // カメラも同じだけ動かし、シーンで設定した相対位置関係（走者を後ろから追う構図等）を保つ。
+      _baseCameraPosition = playerRoot != null ? playerRoot.position : Vector3.zero;
+
       _runner = PickRandomAssigned();
       SpawnRunner();
       RefreshRemainingLineup();
@@ -165,7 +171,18 @@ namespace DemonLordHR.Minigames
     {
       if (_runnerInstance == null || runnerStartPoint == null || gatePoint == null) return;
       var t = _trackLength > 0f ? Mathf.Clamp01(DistanceTravelled / _trackLength) : 0f;
-      _runnerInstance.transform.position = Vector3.Lerp(runnerStartPoint.position, gatePoint.position, t);
+      var runnerPos = Vector3.Lerp(runnerStartPoint.position, gatePoint.position, t);
+      _runnerInstance.transform.position = runnerPos;
+      UpdateCameraFollow(runnerPos);
+    }
+
+    /// <summary>カメラ(playerRoot)を、走者がrunnerStartPointから動いた分だけ同じように動かして追従させる。
+    /// 生の距離ではなく走者の実位置との差分を使うため、trackLengthと実際のワールド距離が
+    /// 一致していなくても走者とカメラの相対位置は常に一定に保たれる。</summary>
+    private void UpdateCameraFollow(Vector3 runnerPos)
+    {
+      if (playerRoot == null || runnerStartPoint == null) return;
+      playerRoot.position = _baseCameraPosition + (runnerPos - runnerStartPoint.position);
     }
 
     private void UpdateDistanceText()
