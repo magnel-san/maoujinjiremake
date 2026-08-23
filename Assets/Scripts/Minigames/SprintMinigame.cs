@@ -9,20 +9,27 @@ namespace DemonLordHR.Minigames
   /// <summary>
   /// 【俊足】：城に迫る勇者より先に城門へ回り込み、通せんぼして足止めする。
   /// 「勇者と100m走で競争する」は、攻めてくる側がのんびり競走に応じる状況として不自然なため、
-  /// 「間に合わせるために全力疾走する」という切迫した状況に変更した。「両腕を振る」で前進する操作自体は
-  /// そのまま。城門(<see cref="gatePoint"/>)に間に合えば防衛成功。
+  /// 「間に合わせるために全力疾走する」という切迫した状況に変更した。城門(<see cref="gatePoint"/>)に
+  /// 間に合えば防衛成功。
+  ///
+  /// 走者は常時<see cref="_baseSpeed"/>で自動的に走り続け、「両腕を振る」たびに編成の合計攻撃力に
+  /// 比例したブースト速度が加算される（一定時間かけて基礎速度まで減衰する）。ジェスチャー自体で
+  /// 瞬間移動させる方式はやめ、「常に走っているキャラをモーションで加速する」という手触りにしている。
   /// </summary>
   public class SprintMinigame : MinigameBase
   {
     [SerializeField] private float _trackLength = 100f;
-    [SerializeField] private float _distancePerMotionFactor = 0.5f;
+    [Tooltip("腕を振らなくても常時出ている基礎速度(m/s)")]
+    [SerializeField] private float _baseSpeed = 3f;
+    [Tooltip("腕を振るたびに加算されるブースト速度＝合計攻撃力×この係数(m/s)")]
+    [SerializeField] private float _boostPerAttackPower = 0.2f;
+    [Tooltip("ブースト速度が基礎速度まで減衰していく速さ(m/s毎秒)")]
+    [SerializeField] private float _boostDecayPerSecond = 4f;
 
     [Header("走者")]
     [SerializeField] private Transform runnerStartPoint;
     [Tooltip("先回りする先＝城門の位置")]
     [SerializeField] private Transform gatePoint;
-    [Tooltip("練習中、腕を振った時に一瞬前へ弾む距離（見た目のフィードバックのみ、実際の距離には影響しない）")]
-    [SerializeField] private float practiceBounceDistance = 0.3f;
 
     [Header("その他の採用キャラの整列")]
     [Tooltip("複数採用されている場合、走者以外の残りのキャラをここから並べて配置する")]
@@ -36,6 +43,8 @@ namespace DemonLordHR.Minigames
     private CharacterData _runner;
     private GameObject _runnerInstance;
     private readonly List<GameObject> _remainingLineup = new List<GameObject>();
+    private bool _practiceActive;
+    private float _boostSpeed;
 
     public float DistanceTravelled { get; private set; }
 
@@ -55,11 +64,22 @@ namespace DemonLordHR.Minigames
       _runner = PickRandomAssigned();
       SpawnRunner();
       RefreshRemainingLineup();
+      DistanceTravelled = 0f;
+      _boostSpeed = 0f;
+      UpdateRunnerPosition();
+      UpdateDistanceText();
+      _practiceActive = true; // 練習中も常時走る手触りを試せるようにする
+    }
+
+    protected override void OnRulesHidden()
+    {
+      _practiceActive = false;
     }
 
     protected override void OnMinigameStart()
     {
       DistanceTravelled = 0f;
+      _boostSpeed = 0f;
       SpawnRunner();
       RefreshRemainingLineup();
       UpdateRunnerPosition();
@@ -68,10 +88,7 @@ namespace DemonLordHR.Minigames
 
     protected override void OnMinigameTick(float deltaTime)
     {
-      if (DistanceTravelled >= _trackLength)
-      {
-        FinishAsDefenseSuccess(); // 城門に間に合った＝通せんぼ成功
-      }
+      Advance(deltaTime, isPractice: false);
     }
 
     protected override void OnMinigameEnd(MinigameResult finalResult)
@@ -79,6 +96,38 @@ namespace DemonLordHR.Minigames
       if (_runnerInstance != null) Destroy(_runnerInstance);
       _runnerInstance = null;
       DespawnLineup(_remainingLineup);
+    }
+
+    private void Update()
+    {
+      // 練習中（本番タイマー開始前）は、ここでだけ常時走行を進める。
+      // OnMinigameTickは本番の時間カウント中しか呼ばれないため。
+      if (_practiceActive) Advance(Time.deltaTime, isPractice: true);
+    }
+
+    /// <summary>常時走行＋ブースト減衰を進め、走者の見た目位置を更新する。
+    /// 本番中に城門(_trackLength)へ到達したら防衛成功。練習中は到達したら最初へループさせ、
+    /// 何度でも「常時走る＋ブーストする」感覚を試せるようにする。</summary>
+    private void Advance(float deltaTime, bool isPractice)
+    {
+      _boostSpeed = Mathf.Max(0f, _boostSpeed - _boostDecayPerSecond * deltaTime);
+      DistanceTravelled += (_baseSpeed + _boostSpeed) * deltaTime;
+
+      if (DistanceTravelled >= _trackLength)
+      {
+        if (isPractice)
+        {
+          DistanceTravelled = 0f;
+        }
+        else
+        {
+          DistanceTravelled = _trackLength;
+          FinishAsDefenseSuccess(); // 城門に間に合った＝通せんぼ成功
+        }
+      }
+
+      UpdateRunnerPosition();
+      UpdateDistanceText();
     }
 
     /// <summary>走者以外の採用キャラを整列し直す（前回の召喚が残っていれば片付けてから再召喚する）。</summary>
@@ -91,17 +140,14 @@ namespace DemonLordHR.Minigames
     protected override void OnGestureForMinigame(GestureType type)
     {
       if (type != GestureType.ArmSwingBoth) return;
-
-      DistanceTravelled = Mathf.Min(_trackLength, DistanceTravelled + totalAttackPower * _distancePerMotionFactor);
-      UpdateRunnerPosition();
-      UpdateDistanceText();
+      _boostSpeed += totalAttackPower * _boostPerAttackPower;
     }
 
-    /// <summary>練習中：腕振りモーション自体を試せるよう、走者を一瞬弾ませるだけで実際の到達距離には影響しない。</summary>
+    /// <summary>練習中も同じブーストを試せるようにする（実際の到達距離は練習終了時にリセットされる）。</summary>
     protected override void OnPracticeGesture(GestureType type)
     {
-      if (type != GestureType.ArmSwingBoth || _runnerInstance == null || runnerStartPoint == null) return;
-      _runnerInstance.transform.position = runnerStartPoint.position + RunDirection * practiceBounceDistance;
+      if (type != GestureType.ArmSwingBoth) return;
+      _boostSpeed += totalAttackPower * _boostPerAttackPower;
     }
 
     /// <summary>走者をrunnerStartPointの位置に、gatePointの方を向かせて召喚する。runnerStartPoint自体の
