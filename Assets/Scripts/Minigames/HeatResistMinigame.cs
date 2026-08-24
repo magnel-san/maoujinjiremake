@@ -22,6 +22,11 @@ namespace DemonLordHR.Minigames
     [SerializeField] private Transform donutCenter;
     [Tooltip("指先の位置に追従して円周上を動くハンドル（カーソル代わりの見た目、任意）")]
     [SerializeField] private Transform valveHandle;
+    [Tooltip("画面中央に固定表示する、実際に回転するバルブ本体の見た目。donutCenterの子にして、" +
+      "回転させたい軸(donutCenterのZ軸＝正面)まわりの回転だけを持つ空のピボットを指定する" +
+      "（見た目のメッシュ自体はさらにその子にして、向き合わせの固定回転だけを持たせる）。" +
+      "指先の角度計算とは独立した見た目専用のフィードバックで、判定には影響しない。")]
+    [SerializeField] private Transform valveWheelVisual;
     [Tooltip("ハンドルをドーナツの円周からどれだけの距離に置くか")]
     [SerializeField] private float donutRadius = 1f;
     [Tooltip("これだけ回したら1回分（マグマ放出1回）とみなす累積角度（度）")]
@@ -128,6 +133,11 @@ namespace DemonLordHR.Minigames
       }
 
       var angle = Mathf.Atan2(localXY.y, localXY.x) * Mathf.Rad2Deg;
+
+      // バルブ本体は画面中央に固定のまま、指先が今どの角度にいるかへ常に向き直す
+      // （＝実際に指で回している向きへバルブ自体が回転して見える）。
+      if (valveWheelVisual != null) valveWheelVisual.localRotation = Quaternion.AngleAxis(angle, Vector3.forward);
+
       if (!_hasPrevAngle)
       {
         _prevAngle = angle;
