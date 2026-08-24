@@ -4691,7 +4691,7 @@ Transform:
   m_GameObject: {fileID: 456923424}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 30, y: 0, z: 240}
+  m_LocalPosition: {x: 30, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5247,7 +5247,7 @@ MonoBehaviour:
   remainingLineupOrigin: {fileID: 1833039687}
   remainingLineupAxis: 5
   remainingLineupSpacing: 30
-  iceChunkPrefab: {fileID: 8908682033280163224, guid: 35e4aa00754939747ae1b21feff07c1b, type: 3}
+  iceChunkPrefab: {fileID: 3802819294464293367, guid: 2a1861b120fe8784aa1024cf09c17a60, type: 3}
   iceSpawnPoints:
   - {fileID: 456923425}
   - {fileID: 1727348756}
@@ -5956,7 +5956,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 599317645}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: 1, z: -0, w: -0.00000004371139}
   m_LocalPosition: {x: 30, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -10633,7 +10633,7 @@ Transform:
   m_GameObject: {fileID: 1205479170}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -30, y: 0, z: 240}
+  m_LocalPosition: {x: -30, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -14023,7 +14023,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1488333730}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: 1, z: -0, w: -0.00000004371139}
   m_LocalPosition: {x: -30, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -16038,7 +16038,7 @@ Transform:
   m_GameObject: {fileID: 1727348755}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 240}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -16911,7 +16911,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1870787889}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: 1, z: -0, w: -0.00000004371139}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -16990,7 +16990,7 @@ MonoBehaviour:
   - genre: 8
     minigame: {fileID: 766603948}
   _debugStartFromMinigame: 1
-  _debugGenre: 8
+  _debugGenre: 7
   _debugHiredCharacters:
   - {fileID: 11400000, guid: 996257ea3b2383c4f9a97843dfc3ffc9, type: 2}
   - {fileID: 11400000, guid: dbe03db9ac2d6d845bfe25302325abc3, type: 2}
@@ -17150,7 +17150,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1885368532
 Transform:
   m_ObjectHideFlags: 0
