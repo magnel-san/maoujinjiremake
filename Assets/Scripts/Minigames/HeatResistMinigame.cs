@@ -46,6 +46,9 @@ namespace DemonLordHR.Minigames
     [SerializeField] private Transform magmaBoxCenter;
     [SerializeField] private float magmaBoxRadius = 1f;
     [SerializeField] private int magmaPerPack = 10;
+    [Tooltip("まとまったマグマ(magmaPackPrefab)を積み重ねる際、1個あたり積み上げるY方向の高さ。" +
+      "プレハブ自体の実際の厚みに合わせないと、めり込んだり隙間が空いたりする。")]
+    [SerializeField] private float magmaPackStackHeight = 0.48f;
 
     [Header("背景")]
     [Tooltip("まとめた回数（パック数）に応じて切り替える背景")]
@@ -227,7 +230,8 @@ namespace DemonLordHR.Minigames
     }
 
     /// <summary>小さいマグマオブジェクトがmagmaPerPack個たまったら、まとめて1つの「まとまった」表現に置き換える。
-    /// 大量のオブジェクトを個別に残し続けると重くなるための対策。</summary>
+    /// 大量のオブジェクトを個別に残し続けると重くなるための対策。まとまった表現はmagmaBoxCenterの
+    /// 真上へ積み重ねていき、パックが増えるたびに高さが伸びていくようにする。</summary>
     private void ConsumeIntoPack()
     {
       foreach (var obj in _pendingMagmaObjects)
@@ -241,7 +245,8 @@ namespace DemonLordHR.Minigames
 
       if (magmaPackPrefab != null && magmaBoxCenter != null)
       {
-        Instantiate(magmaPackPrefab, magmaBoxCenter.position, Quaternion.identity, magmaBoxCenter);
+        var stackedPosition = magmaBoxCenter.position + Vector3.up * (magmaPackStackHeight * (_packCount - 1));
+        Instantiate(magmaPackPrefab, stackedPosition, magmaBoxCenter.rotation, magmaBoxCenter);
       }
     }
 
