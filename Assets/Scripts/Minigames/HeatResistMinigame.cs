@@ -55,6 +55,12 @@ namespace DemonLordHR.Minigames
     [Header("UI")]
     [SerializeField] private TMP_Text magmaGaugeText;
 
+    [Header("デバッグ")]
+    [Tooltip("ONの間、バルブの回転が反応しない原因切り分け用に一定間隔でコンソールへ状態を出す。")]
+    [SerializeField] private bool _debugLogValveState;
+    [SerializeField] private float _debugLogInterval = 0.5f;
+    private float _debugLogTimer;
+
     public float TotalMagma { get; private set; }
 
     private readonly List<GameObject> _pendingMagmaObjects = new List<GameObject>();
@@ -119,12 +125,17 @@ namespace DemonLordHR.Minigames
       if (pointerController == null || donutCenter == null || !pointerController.IsPointerActive)
       {
         _hasPrevAngle = false;
+        DebugLogValveState(reachedAngleCalc: false, Vector2.zero, 0f);
         return;
       }
 
       var local = donutCenter.InverseTransformPoint(pointerController.PointerWorldPosition);
       var localXY = new Vector2(local.x, local.y);
-      if (localXY.sqrMagnitude < 1e-6f) return; // 中心ぴったりだと角度が定まらないので無視する
+      if (localXY.sqrMagnitude < 1e-6f)
+      {
+        DebugLogValveState(reachedAngleCalc: false, localXY, 0f);
+        return; // 中心ぴったりだと角度が定まらないので無視する
+      }
 
       if (valveHandle != null)
       {
@@ -137,6 +148,8 @@ namespace DemonLordHR.Minigames
       // バルブ本体は画面中央に固定のまま、指先が今どの角度にいるかへ常に向き直す
       // （＝実際に指で回している向きへバルブ自体が回転して見える）。
       if (valveWheelVisual != null) valveWheelVisual.localRotation = Quaternion.AngleAxis(angle, Vector3.forward);
+
+      DebugLogValveState(reachedAngleCalc: true, localXY, angle);
 
       if (!_hasPrevAngle)
       {
@@ -154,6 +167,24 @@ namespace DemonLordHR.Minigames
         if (isPractice) SpawnPracticeMagma();
         else RegisterValveTurn();
       }
+    }
+
+    /// <summary>バルブが反応しない原因を実機で切り分けるための診断ログ。
+    /// ポインター自体が無効なのか、中心ぴったりで無視されているだけなのか、
+    /// 角度計算まで届いているのに見た目に反映されていないだけなのかを判別できるようにする。</summary>
+    private void DebugLogValveState(bool reachedAngleCalc, Vector2 localXY, float angle)
+    {
+      if (!_debugLogValveState) return;
+      _debugLogTimer -= Time.deltaTime;
+      if (_debugLogTimer > 0f) return;
+      _debugLogTimer = Mathf.Max(_debugLogInterval, 0.05f);
+
+      var pointerActive = pointerController != null && pointerController.IsPointerActive;
+      var pointerPos = pointerController != null ? pointerController.PointerWorldPosition.ToString("F2") : "N/A";
+
+      Debug.Log($"[HeatResistDebug] pointerController={(pointerController != null)} donutCenter={(donutCenter != null)} " +
+        $"IsPointerActive={pointerActive} PointerWorldPosition={pointerPos} reachedAngleCalc={reachedAngleCalc} " +
+        $"localXY={localXY:F3} angle={angle:F1} valveWheelVisual={(valveWheelVisual != null)}");
     }
 
     private void ResetTracking()
