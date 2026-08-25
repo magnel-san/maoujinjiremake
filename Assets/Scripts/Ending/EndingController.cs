@@ -40,7 +40,7 @@ namespace DemonLordHR.Ending
     private void Awake()
     {
       if (_endButton != null) _endButton.gameObject.SetActive(false);
-      _commemorativePhotoRoot?.SetActive(false);
+      if (_commemorativePhotoRoot != null) _commemorativePhotoRoot.SetActive(false);
       SetResultActive(false);
     }
 
@@ -71,7 +71,7 @@ namespace DemonLordHR.Ending
       ShowScoreBreakdown(genreScores);
 
       // 記念撮影演出
-      _commemorativePhotoRoot?.SetActive(true);
+      if (_commemorativePhotoRoot != null) _commemorativePhotoRoot.SetActive(true);
       // TODO: プレイヤー（の見た目 or カメラ枠）＋採用キャラクター一同を画面に並べる
 
       if (_endButton != null)
@@ -87,7 +87,7 @@ namespace DemonLordHR.Ending
       }
 
       // 次のループ（タイトル〜最終決戦）の間、このエンディング専用の演出が残って見えてしまわないよう片付ける。
-      _commemorativePhotoRoot?.SetActive(false);
+      if (_commemorativePhotoRoot != null) _commemorativePhotoRoot.SetActive(false);
       SetResultActive(false);
     }
 

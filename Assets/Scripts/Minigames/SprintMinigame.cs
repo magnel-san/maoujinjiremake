@@ -47,7 +47,8 @@ namespace DemonLordHR.Minigames
     private readonly List<GameObject> _remainingLineup = new List<GameObject>();
     private bool _practiceActive;
     private float _boostSpeed;
-    private Vector3 _baseCameraPosition;
+    private Vector3 _startPlayerPosition;
+    private Quaternion _startPlayerRotation;
 
     public float DistanceTravelled { get; private set; }
 
@@ -70,17 +71,21 @@ namespace DemonLordHR.Minigames
 
     protected override void OnRulesShown()
     {
-      // この時点でplayerRoot(カメラ)はMinigameBaseのワープ処理により既にwarpTargetの位置にいるため、
-      // それを「追従の基準位置」として覚えておく。以降は走者がrunnerStartPointから動いた分だけ
-      // カメラも同じだけ動かし、シーンで設定した相対位置関係（走者を後ろから追う構図等）を保つ。
-      _baseCameraPosition = playerRoot != null ? playerRoot.position : Vector3.zero;
+      // この時点でplayerRoot(カメラ)はMinigameBaseのワープ処理により既にこのミニゲームの場所に来ているため、
+      // その場所を「戻る先」として記録しておく。ゴール到達時のカメラ追従でここから動いても、
+      // 終了時にはこの記録した位置・向きへそのまま戻す。
+      if (playerRoot != null)
+      {
+        _startPlayerPosition = playerRoot.position;
+        _startPlayerRotation = playerRoot.rotation;
+      }
 
       _runner = PickRandomAssigned();
       SpawnRunner();
       RefreshRemainingLineup();
       DistanceTravelled = 0f;
       _boostSpeed = 0f;
-      UpdateRunnerPosition();
+      UpdateRunnerPosition(isPractice: true);
       UpdateDistanceText();
       _practiceActive = true; // 練習中も常時走る手触りを試せるようにする
     }
@@ -96,7 +101,7 @@ namespace DemonLordHR.Minigames
       _boostSpeed = 0f;
       SpawnRunner();
       RefreshRemainingLineup();
-      UpdateRunnerPosition();
+      UpdateRunnerPosition(isPractice: false);
       UpdateDistanceText();
     }
 
@@ -109,13 +114,19 @@ namespace DemonLordHR.Minigames
 
     protected override void OnMinigameEnd(MinigameResult finalResult)
     {
+      // 走者の移動を止める（以降Advance/UpdateRunnerPositionは呼ばれないため、ここで消してしまえば
+      // それ以上動くことはない）。
       if (_runnerInstance != null) Destroy(_runnerInstance);
       _runnerInstance = null;
       DespawnLineup(_remainingLineup);
 
-      // 走者を追ってカメラ(playerRoot)も城門付近まで進んでいるため、結果表示(ShowResult)は
-      // 元のスタート地点（このミニゲーム開始時のワープ位置）へ戻してから見せる。
-      if (playerRoot != null) playerRoot.position = _baseCameraPosition;
+      // ゴールまでカメラ(playerRoot)は走者を追って進んでいるため、結果表示(ShowResult)の前に
+      // OnRulesShownで記録しておいた元の位置・向きへそのまま戻す。
+      if (playerRoot != null)
+      {
+        playerRoot.position = _startPlayerPosition;
+        playerRoot.rotation = _startPlayerRotation;
+      }
     }
 
     private void Update()
@@ -146,7 +157,7 @@ namespace DemonLordHR.Minigames
         }
       }
 
-      UpdateRunnerPosition();
+      UpdateRunnerPosition(isPractice);
       UpdateDistanceText();
     }
 
@@ -183,22 +194,25 @@ namespace DemonLordHR.Minigames
       _runnerInstance = Instantiate(_runner.characterPrefab, runnerStartPoint.position, rotation);
     }
 
-    private void UpdateRunnerPosition()
+    /// <summary>練習中(isPractice=true)はカメラ(playerRoot)を追従させない（スタート地点に固定したまま、
+    /// 走者だけが行き来する）。本番中(isPractice=false)のみUpdateCameraFollowでカメラを追従させる。</summary>
+    private void UpdateRunnerPosition(bool isPractice)
     {
       if (_runnerInstance == null || runnerStartPoint == null || gatePoint == null) return;
       var t = _trackLength > 0f ? Mathf.Clamp01(DistanceTravelled / _trackLength) : 0f;
       var runnerPos = Vector3.Lerp(runnerStartPoint.position, gatePoint.position, t);
       _runnerInstance.transform.position = runnerPos;
-      UpdateCameraFollow(runnerPos);
+      if (!isPractice) UpdateCameraFollow(runnerPos);
     }
 
     /// <summary>カメラ(playerRoot)を、走者がrunnerStartPointから動いた分だけ同じように動かして追従させる。
-    /// 生の距離ではなく走者の実位置との差分を使うため、trackLengthと実際のワールド距離が
-    /// 一致していなくても走者とカメラの相対位置は常に一定に保たれる。</summary>
+    /// 追従の基準位置には、OnRulesShownで記録した「このミニゲームに来た時点のplayerRoot位置」を使う。
+    /// 生の距離ではなく走者の実位置との差分を使うため、trackLengthと実際のワールド距離が一致していなくても
+    /// 走者とカメラの相対位置は常に一定に保たれる。</summary>
     private void UpdateCameraFollow(Vector3 runnerPos)
     {
       if (playerRoot == null || runnerStartPoint == null) return;
-      playerRoot.position = _baseCameraPosition + (runnerPos - runnerStartPoint.position);
+      playerRoot.position = _startPlayerPosition + (runnerPos - runnerStartPoint.position);
     }
 
     private void UpdateDistanceText()
