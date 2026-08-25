@@ -24,6 +24,13 @@ namespace DemonLordHR.Recruitment
     [Tooltip("現在の所持資金を表示するテキスト（未設定でも動作する）")]
     [SerializeField] private TMP_Text _fundsText;
 
+    [Header("ジャンル開始表示")]
+    [Tooltip("「{ジャンル名}の採用試験を開始する」を表示するUIのルート。未設定なら表示自体を行わない" +
+      "（テキストの表示/非表示だけをこのルートで切り替える）。")]
+    [SerializeField] private GameObject _genreStartRoot;
+    [Tooltip("ジャンル名を書き込むテキスト。")]
+    [SerializeField] private TMP_Text _genreStartText;
+
     [Header("入室・整列")]
     [Tooltip("扉の位置（キャラのスポーン地点）")]
     [SerializeField] private Transform _doorSpawnPoint;
@@ -68,6 +75,7 @@ namespace DemonLordHR.Recruitment
     {
       // 採用試験を実施していない間はボタンを隠しておく。
       if (_endInterviewButton != null) _endInterviewButton.gameObject.SetActive(false);
+      SetGenreStartActive(false);
       UpdateFundsDisplay();
     }
 
@@ -120,8 +128,9 @@ namespace DemonLordHR.Recruitment
       _candidates.Clear();
       _animatedCharacters.Clear();
 
-      // 3.1: 「{ジャンル名}のキャラの採用試験を開始する」UI表示
-      yield return new WaitForSeconds(_settings != null ? _settings.genreStartDisplaySeconds : 3f);
+      // 3.1: 「{ジャンル名}のキャラの採用試験を開始する」UI表示。候補キャラの入室（SpawnAndWalkIn）より
+      // 前に、ジャンル名を数秒間だけ表示する。
+      yield return ShowGenreStart(genre);
 
       CurrentFunds += _settings != null ? _settings.recruitmentPhaseFunds : 100;
       UpdateFundsDisplay();
@@ -171,6 +180,24 @@ namespace DemonLordHR.Recruitment
       }
 
       OnGenreCompleted?.Invoke(genre);
+    }
+
+    /// <summary>候補キャラが入室する前に「{ジャンル名}の採用試験を開始する」を数秒間表示する。
+    /// _genreStartRootが未設定でも、_genreStartText自体のGameObjectを表示/非表示できるようにしておく。</summary>
+    private IEnumerator ShowGenreStart(RecruitmentGenre genre)
+    {
+      if (_genreStartText != null) _genreStartText.text = $"{genre.ToDisplayName()}の採用試験を開始する";
+      SetGenreStartActive(true);
+
+      yield return new WaitForSeconds(_settings != null ? _settings.genreStartDisplaySeconds : 3f);
+
+      SetGenreStartActive(false);
+    }
+
+    private void SetGenreStartActive(bool active)
+    {
+      if (_genreStartRoot != null) _genreStartRoot.SetActive(active);
+      else if (_genreStartText != null) _genreStartText.gameObject.SetActive(active);
     }
 
     private List<CharacterData> PickCandidates(RecruitmentGenre genre, int count)

@@ -98,6 +98,27 @@ namespace DemonLordHR.Core
     HeatResist,
   }
 
+  public static class RecruitmentGenreExtensions
+  {
+    /// <summary>ジャンル開始表示（「{ジャンル名}の採用試験を開始する」）等、プレイヤーに見せる日本語名。</summary>
+    public static string ToDisplayName(this RecruitmentGenre genre)
+    {
+      switch (genre)
+      {
+        case RecruitmentGenre.Swim: return "遊泳";
+        case RecruitmentGenre.Flight: return "飛行";
+        case RecruitmentGenre.Sprint: return "俊足";
+        case RecruitmentGenre.Labor: return "労働";
+        case RecruitmentGenre.Scout: return "偵察";
+        case RecruitmentGenre.Combat: return "戦闘";
+        case RecruitmentGenre.Intelligence: return "知性";
+        case RecruitmentGenre.ColdResist: return "耐寒";
+        case RecruitmentGenre.HeatResist: return "耐熱";
+        default: return genre.ToString();
+      }
+    }
+  }
+
   /// <summary>採用キャラの整列方向。ワールド座標軸のどちらへ並べるかを選ぶ。</summary>
   public enum LineupAxis
   {
