@@ -114,8 +114,13 @@ namespace DemonLordHR.Minigames
       }
     }
 
+    /// <summary>今まさに使われているパイロットの当たり判定半径。maxSizeReferenceが設定されていれば
+    /// そちらを優先する（SetupPilotHitVolumeと同じ基準）。GapRadiusもこれを使うことで、
+    /// maxSizeReferenceを差し替えても隙間サイズが自動的に追従し、ズレたままにならないようにする。</summary>
+    private float CurrentPilotRadius => GetReferenceRadius(maxSizeReference, pilotColliderRadius);
+
     /// <summary>隙間の半径（中心から上端/下端までの距離）。直径がパイロット当たり判定の直径+gapMarginになる。</summary>
-    private float GapRadius => pilotColliderRadius + gapMargin * 0.5f;
+    private float GapRadius => CurrentPilotRadius + gapMargin * 0.5f;
 
     // パイロット＋残りの整列を自前でスポーンするため、基底クラスの一括召喚は使わない
     // （両方動くとパイロットが二重に召喚されてしまう）。
@@ -238,7 +243,7 @@ namespace DemonLordHR.Minigames
     /// 一辺を下回らない範囲で底上げする（詳細はComputeMinScale参照）。</summary>
     private void SetupPilotHitVolume(GameObject instance)
     {
-      var radius = GetReferenceRadius(maxSizeReference, pilotColliderRadius);
+      var radius = CurrentPilotRadius;
 
       var scale = ComputeFitScale(instance, radius);
       if (scale <= 0f) scale = 1f;
