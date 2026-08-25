@@ -29,6 +29,10 @@ namespace DemonLordHR.Minigames
     [Header("走者・レーン")]
     [Tooltip("各レーンの立ち位置。[0]=左, [1]=中央, [2]=右")]
     [SerializeField] private Transform[] lanePositions = new Transform[LaneCount];
+    [Tooltip("見下ろし視点にするためlanePositions自体を傾けている場合、操作キャラ(防御役)の見た目まで" +
+      "一緒に傾いてしまわないよう、向きだけはこちらを使う。未設定ならlanePositions[1]の向きをそのまま使う" +
+      "（従来通り）。")]
+    [SerializeField] private Transform defenderFacingReference;
 
     [Header("その他の採用キャラの整列")]
     [Tooltip("複数採用されている場合、中央レーンに立つ1体以外の残りのキャラをここから並べて配置する")]
@@ -160,7 +164,8 @@ namespace DemonLordHR.Minigames
       if (_defenderInstance != null) Destroy(_defenderInstance);
       if (_defender == null || _defender.characterPrefab == null || lanePositions == null || lanePositions.Length <= 1 || lanePositions[1] == null) return;
 
-      _defenderInstance = Instantiate(_defender.characterPrefab, lanePositions[1].position, lanePositions[1].rotation);
+      var facing = defenderFacingReference != null ? defenderFacingReference.rotation : lanePositions[1].rotation;
+      _defenderInstance = Instantiate(_defender.characterPrefab, lanePositions[1].position, facing);
     }
 
     private void UpdateDefenderPosition()

@@ -28,8 +28,9 @@ namespace DemonLordHR.Minigames
     [SerializeField] private TMP_Text completedCountText;
 
     [Header("積み上げオブジェクト")]
-    [Tooltip("ゲージが満了するたびに箱の中へ召喚するオブジェクト")]
-    [SerializeField] private GameObject stackObjectPrefab;
+    [Tooltip("ゲージが満了するたびに箱の中へ召喚するオブジェクト。複数設定すると、そのたびにランダムで" +
+      "1つ選んで積み上げる（見た目に変化をつけるため）。")]
+    [SerializeField] private GameObject[] stackObjectPrefabs;
     [Tooltip("積み上げの基準位置（箱の底の中心あたり）")]
     [SerializeField] private Transform stackBasePoint;
     [SerializeField] private float stackHeightPerObject = 0.3f;
@@ -83,10 +84,13 @@ namespace DemonLordHR.Minigames
 
     private void SpawnStackObject()
     {
-      if (stackObjectPrefab == null || stackBasePoint == null) return;
+      if (stackObjectPrefabs == null || stackObjectPrefabs.Length == 0 || stackBasePoint == null) return;
+
+      var prefab = stackObjectPrefabs[Random.Range(0, stackObjectPrefabs.Length)];
+      if (prefab == null) return;
 
       var position = stackBasePoint.position + Vector3.up * (stackHeightPerObject * _stackedInstances.Count);
-      var instance = Instantiate(stackObjectPrefab, position, stackBasePoint.rotation);
+      var instance = Instantiate(prefab, position, stackBasePoint.rotation);
       _stackedInstances.Add(instance);
     }
 
