@@ -37,9 +37,17 @@ namespace DemonLordHR.Minigames
     [SerializeField] private float maxY = 3f;
 
     [Header("パイロットの当たり判定（球）")]
-    [Tooltip("パイロットの当たり判定として使う球コライダーの半径。採用キャラの見た目はこの半径に" +
-      "ちょうど収まるよう自動的に拡大縮小される（キャラごとのサイズ差を吸収する）。")]
+    [Tooltip("パイロットの当たり判定として使う球コライダーの半径。maxSizeReferenceが未設定の場合に使う" +
+      "フォールバック値。採用キャラの見た目はこの半径にちょうど収まるよう自動的に拡大縮小される" +
+      "（キャラごとのサイズ差を吸収する）。")]
     [SerializeField] private float pilotColliderRadius = 0.6f;
+    [Tooltip("見た目の最大サイズの目安として置くCube（任意）。このCubeの一辺の長さを直径とみなし、" +
+      "その球にちょうど収まるようキャラを拡大縮小する。設定しない場合はpilotColliderRadiusを使う。")]
+    [SerializeField] private Transform maxSizeReference;
+    [Tooltip("見た目の最小サイズの目安として置くCube（任意）。キャラの高さがこのCubeの一辺より" +
+      "小さくならないよう、必要なら逆に拡大する（尻尾や翼などの横方向の付属物に引っ張られて" +
+      "極端に縮んでしまうキャラの救済用）。未設定なら最小サイズの底上げは行わない。")]
+    [SerializeField] private Transform minSizeReference;
     [Tooltip("当たり判定の球を可視化する半透明マテリアル。未設定でも既定マテリアルで表示はされる。")]
     [SerializeField] private Material pilotColliderVisualMaterial;
 
@@ -219,34 +227,48 @@ namespace DemonLordHR.Minigames
       SetupPilotHitVolume(_pilotInstance);
     }
 
-    /// <summary>キャラの見た目をpilotColliderRadiusの球にちょうど収まるよう拡大縮小し、
-    /// 実際の当たり判定として球コライダーを追加、見た目としても半透明の球を表示する。
-    /// 採用キャラのプレハブは原点(0,0,0)がY=0の床、そこからY+方向にキャラが立っている前提のため、
-    /// 球は中心を浮かせず「最下点が足元(Y=0)に接する」位置に置く（球の中心で合わせるとキャラが
-    /// 上にはみ出てしまうため）。</summary>
+    /// <summary>キャラの見た目を目標の球にちょうど収まるよう拡大縮小し、実際の当たり判定として
+    /// 球コライダーを追加、見た目としても半透明の球を表示する。採用キャラのプレハブは原点(0,0,0)が
+    /// Y=0の床、そこからY+方向にキャラが立っている前提のため、球は中心を浮かせず「最下点が
+    /// 足元(Y=0)に接する」位置に置く（球の中心で合わせるとキャラが上にはみ出てしまうため）。
+    ///
+    /// maxSizeReference(最大サイズの目安Cube)が設定されていればその一辺から半径を求め、未設定なら
+    /// pilotColliderRadiusを使う。minSizeReference(最小サイズの目安Cube)が設定されている場合、
+    /// 尻尾や翼など横方向に長い付属物に引っ張られて極端に縮んでしまうキャラを、高さがこのCubeの
+    /// 一辺を下回らない範囲で底上げする（詳細はComputeMinScale参照）。</summary>
     private void SetupPilotHitVolume(GameObject instance)
     {
-      var scale = ComputeFitScale(instance, pilotColliderRadius);
+      var radius = GetReferenceRadius(maxSizeReference, pilotColliderRadius);
+
+      var scale = ComputeFitScale(instance, radius);
       if (scale <= 0f) scale = 1f;
+
+      var minHeight = GetReferenceEdgeLength(minSizeReference);
+      if (minHeight > 0f)
+      {
+        var minScale = ComputeMinScale(instance, minHeight);
+        if (minScale > scale) scale = minScale;
+      }
+
       instance.transform.localScale *= scale;
 
-      // 親（キャラ本体）の拡大縮小の影響を打ち消し、常にワールド基準でpilotColliderRadiusになるようにする。
+      // 親（キャラ本体）の拡大縮小の影響を打ち消し、常にワールド基準でradiusになるようにする。
       var hitVolume = new GameObject("HitVolume");
       hitVolume.transform.SetParent(instance.transform, false);
       var counterScale = 1f / scale;
       hitVolume.transform.localScale = Vector3.one * counterScale;
-      // 床(Y=0、親のローカル原点)からpilotColliderRadius分だけ上に球の中心を置く
+      // 床(Y=0、親のローカル原点)からradius分だけ上に球の中心を置く
       // （親のスケールがかかる前の値で指定する必要があるため、counterScaleで打ち消しておく）。
-      hitVolume.transform.localPosition = new Vector3(0f, pilotColliderRadius * counterScale, 0f);
+      hitVolume.transform.localPosition = new Vector3(0f, radius * counterScale, 0f);
 
       var collider = hitVolume.AddComponent<SphereCollider>();
       collider.isTrigger = true;
-      collider.radius = pilotColliderRadius;
+      collider.radius = radius;
 
       var visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
       visual.name = "HitVolumeVisual";
       visual.transform.SetParent(hitVolume.transform, false);
-      visual.transform.localScale = Vector3.one * (pilotColliderRadius * 2f); // 既定の球は半径0.5(直径1)基準
+      visual.transform.localScale = Vector3.one * (radius * 2f); // 既定の球は半径0.5(直径1)基準
       Destroy(visual.GetComponent<Collider>()); // 見た目だけなので、生成時に付与される既定のコライダーは要らない
 
       if (pilotColliderVisualMaterial != null)
@@ -255,25 +277,43 @@ namespace DemonLordHR.Minigames
       }
     }
 
+    /// <summary>referenceが指す目安用Cubeの一辺のワールド長から半径(一辺÷2)を求める。未設定ならfallbackを返す。
+    /// 既定のCubeプリミティブは1辺=スケール1に相当するため、lossyScaleの各成分がそのまま辺の長さになる
+    /// （非一様スケールで置かれた場合に備え最大成分を使う）。</summary>
+    private static float GetReferenceRadius(Transform reference, float fallbackRadius)
+    {
+      if (reference == null) return fallbackRadius;
+      var s = reference.lossyScale;
+      return Mathf.Max(s.x, Mathf.Max(s.y, s.z)) * 0.5f;
+    }
+
+    private static float GetReferenceEdgeLength(Transform reference)
+    {
+      if (reference == null) return 0f;
+      var s = reference.lossyScale;
+      return Mathf.Max(s.x, Mathf.Max(s.y, s.z));
+    }
+
     /// <summary>
-    /// instanceの全Rendererを包むワールド空間の境界を求め、それをinstanceのローカル空間（拡縮前）に変換した
-    /// 8隅の座標から、「Y=0(足元)に最下点が接する半径targetRadiusの球」に全て収まる最大スケールを求める。
-    /// 球の中心は(0, targetRadius, 0)なので、ローカル座標(x,y,z)がスケールsされた点(sx,sy,sz)について
-    ///   (sx)^2 + (sy-targetRadius)^2 + (sz)^2 <= targetRadius^2
-    /// を整理すると s <= 2*y*targetRadius / (x^2+y^2+z^2) （y>0の点のみ有効）。
+    /// instanceの全Rendererを包む「現在のワールド空間での」境界を求め、instance.transform.position
+    /// （足元のワールド座標）を基準に、「Y=0(足元)に最下点が接する半径targetRadiusの球」に全て収まる
+    /// 最大の拡縮倍率（instance.transform.localScaleへ乗算する値）を求める。
+    /// 以前はinstanceのworldToLocalMatrixで一旦「プレハブ自身のローカル空間」に戻してから計算していたが、
+    /// キャラプレハブごとにFBXインポート時のルートスケールがバラバラ(0.02倍〜数十倍)だったため、
+    /// その差をそのまま計算に持ち込んでしまい一部のキャラが極端に大きく/小さくなるバグがあった。
+    /// ワールド空間の実寸（＝現在プレハブとして見えている実際の大きさ）をそのまま基準にすることで、
+    /// プレハブ側の元スケールに関わらず一貫した結果になる。
+    /// 球の中心は足元から(0, targetRadius, 0)なので、原点からのオフセット(dx,dy,dz)について
+    ///   (s*dx)^2 + (s*dy-targetRadius)^2 + (s*dz)^2 <= targetRadius^2
+    /// を整理すると s <= 2*dy*targetRadius / (dx^2+dy^2+dz^2) （dy>0の点のみ有効）。
     /// 全隅点でこれを満たす最大のsが答え。
     /// </summary>
     private static float ComputeFitScale(GameObject instance, float targetRadius)
     {
       if (targetRadius <= 0f) return 0f;
+      if (!TryGetWorldBounds(instance, out var worldBounds)) return 0f;
 
-      var renderers = instance.GetComponentsInChildren<Renderer>();
-      if (renderers.Length == 0) return 0f;
-
-      var worldBounds = renderers[0].bounds;
-      for (var i = 1; i < renderers.Length; i++) worldBounds.Encapsulate(renderers[i].bounds);
-
-      var worldToLocal = instance.transform.worldToLocalMatrix; // この時点ではまだ拡縮前なのでプレハブ本来の単位が得られる
+      var origin = instance.transform.position; // 足元のワールド座標
       var min = worldBounds.min;
       var max = worldBounds.max;
 
@@ -287,18 +327,42 @@ namespace DemonLordHR.Minigames
           (i & 2) == 0 ? min.y : max.y,
           (i & 4) == 0 ? min.z : max.z);
 
-        var local = worldToLocal.MultiplyPoint3x4(corner);
-        if (local.y <= 0.0001f) continue; // 床にほぼ接している/めり込んでいる点はこの式では扱えないためスキップ
+        var offset = corner - origin;
+        if (offset.y <= 0.0001f) continue; // 床にほぼ接している/めり込んでいる点はこの式では扱えないためスキップ
 
-        var sqDist = local.x * local.x + local.y * local.y + local.z * local.z;
+        var sqDist = offset.x * offset.x + offset.y * offset.y + offset.z * offset.z;
         if (sqDist <= 0.0001f) continue;
 
-        var allowedScale = (2f * local.y * targetRadius) / sqDist;
+        var allowedScale = (2f * offset.y * targetRadius) / sqDist;
         if (allowedScale < maxScale) maxScale = allowedScale;
         anyValid = true;
       }
 
       return anyValid ? maxScale : 0f;
+    }
+
+    /// <summary>足元(instance.transform.position)から見た現在のワールド高さが、最低でもminHeightに
+    /// 届くよう底上げするための拡縮倍率を求める。ComputeFitScaleと違い横方向の付属物（尻尾・翼等）には
+    /// 引っ張られないよう、高さ(Y)だけを基準にする。</summary>
+    private static float ComputeMinScale(GameObject instance, float minHeight)
+    {
+      if (minHeight <= 0f) return 0f;
+      if (!TryGetWorldBounds(instance, out var worldBounds)) return 0f;
+
+      var currentHeight = worldBounds.max.y - instance.transform.position.y;
+      if (currentHeight <= 0.0001f) return 0f;
+
+      return minHeight / currentHeight;
+    }
+
+    private static bool TryGetWorldBounds(GameObject instance, out Bounds worldBounds)
+    {
+      var renderers = instance.GetComponentsInChildren<Renderer>();
+      if (renderers.Length == 0) { worldBounds = default; return false; }
+
+      worldBounds = renderers[0].bounds;
+      for (var i = 1; i < renderers.Length; i++) worldBounds.Encapsulate(renderers[i].bounds);
+      return true;
     }
 
     /// <summary>開始時／墜落後の3秒待機に入る。重力を切ってパイロットを基準の高さへ戻し、
