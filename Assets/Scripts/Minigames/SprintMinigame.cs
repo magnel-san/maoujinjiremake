@@ -21,8 +21,10 @@ namespace DemonLordHR.Minigames
     [SerializeField] private float _trackLength = 100f;
     [Tooltip("腕を振らなくても常時出ている基礎速度(m/s)")]
     [SerializeField] private float _baseSpeed = 3f;
-    [Tooltip("腕を振るたびに加算されるブースト速度＝合計攻撃力×この係数(m/s)")]
-    [SerializeField] private float _boostPerAttackPower = 0.2f;
+    [Tooltip("腕を振るたびに加算されるブースト速度＝合計攻撃力×この係数(m/s)。合計攻撃力は300〜1500程度に" +
+      "なる想定なので、0.2のままだと1振りで+60〜+300も乗ってしまい基礎速度(3)を無意味にするほど" +
+      "暴走していた。中間の合計攻撃力(約900)で+3前後＝基礎速度をだいたい倍にする程度に収まるよう調整。")]
+    [SerializeField] private float _boostPerAttackPower = 0.003f;
     [Tooltip("ブースト速度が基礎速度まで減衰していく速さ(m/s毎秒)")]
     [SerializeField] private float _boostDecayPerSecond = 4f;
 

@@ -60,6 +60,7 @@ namespace DemonLordHR.Core
     public GameState CurrentState { get; private set; } = GameState.Title;
 
     private readonly List<RecruitmentGenre> _selectedGenres = new List<RecruitmentGenre>();
+    private readonly List<(RecruitmentGenre genre, float score)> _genreScores = new List<(RecruitmentGenre, float)>();
     private int _defenseSuccessCount;
     private int _gameOverCount;
 
@@ -157,6 +158,7 @@ namespace DemonLordHR.Core
       if (_handTrackingController != null) _handTrackingController.HandsVisible = false;
       _defenseSuccessCount = 0;
       _gameOverCount = 0;
+      _genreScores.Clear();
 
       // 各ミニゲームはこの後プレイヤー本体をその場所へワープさせるため、
       // 全ミニゲーム終了後に戻れるよう、ここで元の位置を覚えておく。
@@ -183,6 +185,8 @@ namespace DemonLordHR.Core
 
         if (result == MinigameResult.DefenseSuccess) _defenseSuccessCount++;
         else if (result == MinigameResult.GameOver) _gameOverCount++;
+
+        _genreScores.Add((genre, minigame.FinalScore));
       }
 
       if (originalPlayerPosition.HasValue) _playerRoot.position = originalPlayerPosition.Value;
@@ -200,7 +204,7 @@ namespace DemonLordHR.Core
       {
         var summary = $"防衛成功:{_defenseSuccessCount} ゲームオーバー:{_gameOverCount}";
         var hired = _recruitmentController != null ? _recruitmentController.HiredCharacters : new List<CharacterData>();
-        yield return _endingController.RunAsync(summary, hired);
+        yield return _endingController.RunAsync(summary, hired, _genreScores);
       }
     }
 

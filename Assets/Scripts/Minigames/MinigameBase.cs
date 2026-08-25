@@ -90,6 +90,9 @@ namespace DemonLordHR.Minigames
     public bool IsRunning => isRunning;
     /// <summary>採用キャラの合計攻撃力。各ジャンルのスコア/ダメージ計算の基礎値として使う。</summary>
     public float TotalAttackPower => totalAttackPower;
+    /// <summary>このミニゲームの最終スコア（GetFinalScoreの公開ラッパー）。エンディングで全ジャンルの
+    /// スコア内訳を集計する際、GameFlowManagerから読み取れるようにするために公開している。</summary>
+    public float FinalScore => GetFinalScore();
 
     protected virtual void Awake()
     {

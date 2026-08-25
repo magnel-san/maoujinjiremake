@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using DemonLordHR.Core;
 using DemonLordHR.UI;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,7 +12,7 @@ namespace DemonLordHR.Ending
 {
   /// <summary>
   /// エンディング演出（仕様書6章）：AI画像生成による魔王城の新しい姿の表示、記念撮影演出、
-  /// 「終了する」ボタンでタイトルへ戻る。
+  /// 全ジャンルの合計スコア表示、スコアに応じた結果画像の切り替え、「終了する」ボタンでタイトルへ戻る。
   /// </summary>
   public class EndingController : MonoBehaviour
   {
@@ -18,6 +20,17 @@ namespace DemonLordHR.Ending
     [SerializeField] private CircularHoldButton _endButton;
     [SerializeField] private RawImage _generatedStageImage;
     [SerializeField] private GameObject _commemorativePhotoRoot;
+
+    [Header("スコア内訳表示")]
+    [Tooltip("「合計スコア: 3000点（遊泳フェーズ1000点+飛行フェーズ1000点+労働フェーズ1000点）」のような" +
+      "内訳込みの合計スコアを表示するテキスト。")]
+    [SerializeField] private TMP_Text _scoreBreakdownText;
+
+    [Header("スコアに応じた結果画像")]
+    [Tooltip("合計スコアに応じて切り替える結果画像。「このスコア以上ならこの画像」という条件をここに" +
+      "並べておくと、合計スコアを一番高いしきい値から順に判定し、最初に条件を満たしたものを表示する。")]
+    [SerializeField] private Image _resultImage;
+    [SerializeField] private List<ResultImageThreshold> _resultImageThresholds = new List<ResultImageThreshold>();
 
     private IStageImageGenerator _imageGenerator = new NullStageImageGenerator();
 
@@ -32,7 +45,8 @@ namespace DemonLordHR.Ending
       _imageGenerator = generator ?? new NullStageImageGenerator();
     }
 
-    public IEnumerator RunAsync(string minigameResultSummary, IReadOnlyList<CharacterData> hiredCharacters)
+    public IEnumerator RunAsync(string minigameResultSummary, IReadOnlyList<CharacterData> hiredCharacters,
+      IReadOnlyList<(RecruitmentGenre genre, float score)> genreScores = null)
     {
       var prompt = BuildPrompt(minigameResultSummary, hiredCharacters);
 
@@ -43,6 +57,8 @@ namespace DemonLordHR.Ending
       {
         _generatedStageImage.texture = generated;
       }
+
+      ShowScoreBreakdown(genreScores);
 
       // 記念撮影演出
       _commemorativePhotoRoot?.SetActive(true);
@@ -76,5 +92,56 @@ namespace DemonLordHR.Ending
       }
       return sb.ToString();
     }
+
+    /// <summary>「合計スコア: 3000点（遊泳フェーズ1000点+飛行フェーズ1000点+...）」の形式でテキストへ
+    /// 反映し、合計スコアに応じた結果画像を選んで表示する。</summary>
+    private void ShowScoreBreakdown(IReadOnlyList<(RecruitmentGenre genre, float score)> genreScores)
+    {
+      if (genreScores == null) return;
+
+      var total = 0f;
+      var terms = new List<string>();
+      foreach (var entry in genreScores)
+      {
+        total += entry.score;
+        terms.Add($"{entry.genre.ToDisplayName()}フェーズ{entry.score:0}点");
+      }
+
+      if (_scoreBreakdownText != null)
+      {
+        var breakdown = terms.Count > 0 ? $"（{string.Join("+", terms)}）" : "";
+        _scoreBreakdownText.text = $"合計スコア: {total:0}点{breakdown}";
+      }
+
+      ApplyResultImage(total);
+    }
+
+    /// <summary>合計スコアが一番高いしきい値から順に判定し、最初に条件（合計スコア >= minScore）を
+    /// 満たしたものを結果画像として表示する。</summary>
+    private void ApplyResultImage(float totalScore)
+    {
+      if (_resultImage == null || _resultImageThresholds == null || _resultImageThresholds.Count == 0) return;
+
+      ResultImageThreshold best = null;
+      foreach (var entry in _resultImageThresholds)
+      {
+        if (entry == null || totalScore < entry.minScore) continue;
+        if (best == null || entry.minScore > best.minScore) best = entry;
+      }
+
+      if (best != null && best.image != null)
+      {
+        _resultImage.sprite = best.image;
+        _resultImage.gameObject.SetActive(true);
+      }
+    }
+  }
+
+  [System.Serializable]
+  public class ResultImageThreshold
+  {
+    [Tooltip("合計スコアがこの値以上の場合にこの画像を使う。")]
+    public float minScore;
+    public Sprite image;
   }
 }
