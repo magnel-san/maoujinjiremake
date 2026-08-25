@@ -3,6 +3,7 @@ using System.Collections;
 using DemonLordHR.Core;
 using DemonLordHR.HandTracking;
 using DemonLordHR.UI;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -42,11 +43,23 @@ namespace DemonLordHR.Recruitment
     [Tooltip("履歴書表示中、決定前に閉じるための円状ボタン")]
     [SerializeField] private CircularHoldButton _backButton;
 
+    [Header("資金不足エラー表示")]
+    [Tooltip("資金が足りず採用できなかった時に表示するUIのルート。未設定でも_insufficientFundsText自体の" +
+      "表示/非表示で代用する。両方未設定ならエラー表示自体を行わない（採用も従来通り不成立のまま）。")]
+    [SerializeField] private GameObject _insufficientFundsRoot;
+    [Tooltip("エラーメッセージを書き込むテキスト。")]
+    [SerializeField] private TMP_Text _insufficientFundsText;
+    [Tooltip("表示する文言。")]
+    [SerializeField] private string _insufficientFundsMessage = "お金が足りない";
+    [Tooltip("エラー表示を自動的に消すまでの秒数。")]
+    [SerializeField] private float _insufficientFundsDisplaySeconds = 2f;
+
     private CharacterData _currentCharacter;
     private int _currentPage;
     private bool _isOpen;
     private ResumeDecision _decision;
     private Coroutine _autoCloseCoroutine;
+    private Coroutine _insufficientFundsCoroutine;
 
     public event Action<CharacterData> OnHireIntent;
     public event Action<CharacterData> OnRejectIntent;
@@ -68,6 +81,7 @@ namespace DemonLordHR.Recruitment
       _resumeImageRoot?.SetActive(false);
       _stampImageRoot?.SetActive(false);
       if (_backButton != null) _backButton.gameObject.SetActive(false);
+      SetInsufficientFundsActive(false);
     }
 
     private void OnEnable()
@@ -125,10 +139,17 @@ namespace DemonLordHR.Recruitment
         _autoCloseCoroutine = null;
       }
 
+      if (_insufficientFundsCoroutine != null)
+      {
+        StopCoroutine(_insufficientFundsCoroutine);
+        _insufficientFundsCoroutine = null;
+      }
+
       _isOpen = false;
       _resumeImageRoot?.SetActive(false);
       _stampImageRoot?.SetActive(false);
       if (_backButton != null) _backButton.gameObject.SetActive(false);
+      SetInsufficientFundsActive(false);
       _resumePoseRecognizer?.SetCapturing(false);
       _currentCharacter = null;
 
@@ -182,7 +203,11 @@ namespace DemonLordHR.Recruitment
 
     private void ConfirmHire()
     {
-      if (_recruitmentController != null && !_recruitmentController.CanAfford(_currentCharacter)) return; // 資金不足
+      if (_recruitmentController != null && !_recruitmentController.CanAfford(_currentCharacter))
+      {
+        ShowInsufficientFunds();
+        return; // 資金不足のため不成立。履歴書は開いたままにし、プレイヤーがそのまま見送り(不採用)を選べるようにする。
+      }
 
       _decision = ResumeDecision.Hired;
       _resumePoseRecognizer?.SetCapturing(false);
@@ -212,6 +237,29 @@ namespace DemonLordHR.Recruitment
       yield return new WaitForSeconds(Mathf.Max(seconds, 0f));
       _autoCloseCoroutine = null;
       Close();
+    }
+
+    /// <summary>資金不足で採用が成立しなかった際、一定時間だけエラーメッセージを表示する。</summary>
+    private void ShowInsufficientFunds()
+    {
+      if (_insufficientFundsText != null) _insufficientFundsText.text = _insufficientFundsMessage;
+      SetInsufficientFundsActive(true);
+
+      if (_insufficientFundsCoroutine != null) StopCoroutine(_insufficientFundsCoroutine);
+      _insufficientFundsCoroutine = StartCoroutine(HideInsufficientFundsAfter(_insufficientFundsDisplaySeconds));
+    }
+
+    private IEnumerator HideInsufficientFundsAfter(float seconds)
+    {
+      yield return new WaitForSeconds(Mathf.Max(seconds, 0f));
+      _insufficientFundsCoroutine = null;
+      SetInsufficientFundsActive(false);
+    }
+
+    private void SetInsufficientFundsActive(bool active)
+    {
+      if (_insufficientFundsRoot != null) _insufficientFundsRoot.SetActive(active);
+      else if (_insufficientFundsText != null) _insufficientFundsText.gameObject.SetActive(active);
     }
   }
 }
