@@ -15,9 +15,9 @@ MonoBehaviour:
   characterName: "\u30BD\u30CB\u30C3\u30AF\u30DE\u30A6\u30B9"
   genre: 2
   characterPrefab: {fileID: 1080831611865573732, guid: 5ca8b635b7ede3445bddcfb638fc034f, type: 3}
-  salary: 0
-  attackPower: 0
+  salary: 620
+  attackPower: 780
   resumePages:
-  - {fileID: 21300000, guid: 35804f1c11043564286b7db6cc76b289, type: 3}
-  - {fileID: 21300000, guid: bf05b527b081c874f81222dfbec00553, type: 3}
+  - {fileID: 21300000, guid: d16e09ae7a0fef342a75f3b4695891df, type: 3}
+  - {fileID: 21300000, guid: b8a800ed1d8e3b4449d43622c68843b5, type: 3}
   aiPromptFragment: 

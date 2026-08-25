@@ -1,9 +1,14 @@
 fileFormatVersion: 2
-guid: a5bc4ce5bf0dc31458b0429733d8a762
+guid: e89844c986283ea49a7a55d4ca48ce01
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Nurikabe
+    second: {fileID: 2100000, guid: 7aea3ad3984ab044593cfb985d37085e, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

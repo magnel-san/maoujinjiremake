@@ -1,0 +1,12 @@
+{
+    "asset": "96685226a2839f347a7a030a5fe937dd",
+    "fileName": "01a02d88-c044-7063-896b-7189ac31da04_Preview.png",
+    "prompt": "360 degree panoramic view, equirectangular projection, HDRI skybox texture for Unity, seamless. Dark fantasy demon world, deep ominous dark red and crimson night sky with turbulent dark clouds. A perfect round glowing eerie full moon far in the background. Below the low horizon line, a dark, desolate volcanic earth floor and foggy ground texture that blends perfectly with the scene. No objects close up, wide angle view.",
+    "negativePrompt": "",
+    "model": "gemini-3.1-flash-texture",
+    "modelName": "Gemini 3.1 Nano Banana 2",
+    "customSeed": 337441476,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation"
+}

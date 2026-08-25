@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a3ba15480fd70148888d87fb910d2a3, type: 3}
+  m_Name: "\u30D6\u30C3\u30AF"
+  m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Core.CharacterData
+  characterName: "\u30D6\u30C3\u30AF"
+  genre: 6
+  characterPrefab: {fileID: 8908560021602752667, guid: be11f7ffce24f314a827d99ac060ca6c, type: 3}
+  salary: 780
+  attackPower: 980
+  resumePages:
+  - {fileID: 21300000, guid: 9974aaece6eefb84eb74d6a803b47efa, type: 3}
+  - {fileID: 21300000, guid: 416cde8a47b78684a9534a52d580a028, type: 3}
+  aiPromptFragment: 

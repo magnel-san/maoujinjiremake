@@ -3,7 +3,22 @@ guid: 1c2a0f9c46a9d63459ebc05aaac0815f
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Himo1
+    second: {fileID: 2100000, guid: 071ef48ff075cad4aa904b31c07183de, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: StrawHand_Texture
+    second: {fileID: 2100000, guid: 071ef48ff075cad4aa904b31c07183de, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Straw_Texture
+    second: {fileID: 2100000, guid: 071ef48ff075cad4aa904b31c07183de, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

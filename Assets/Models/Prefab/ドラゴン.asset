@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a3ba15480fd70148888d87fb910d2a3, type: 3}
   m_Name: "\u30C9\u30E9\u30B4\u30F3"
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Core.CharacterData
-  characterName: "\u30C9\u30E9\u30B4\u30F3"
-  genre: 1
+  characterName: "\u30EC\u30C3\u30C9\u30C9\u30E9\u30B4\u30F3"
+  genre: 5
   characterPrefab: {fileID: 3428445856147963493, guid: f8fa226e46feeee448b999575ac567fe, type: 3}
-  salary: 0
-  attackPower: 0
+  salary: 740
+  attackPower: 920
   resumePages:
-  - {fileID: 21300000, guid: 35804f1c11043564286b7db6cc76b289, type: 3}
-  - {fileID: 21300000, guid: bf05b527b081c874f81222dfbec00553, type: 3}
+  - {fileID: 21300000, guid: 544ff195fdeebf24799898f091bda0e9, type: 3}
+  - {fileID: 21300000, guid: 2934f00ecbc26be4fbf450da571b8255, type: 3}
   aiPromptFragment: 

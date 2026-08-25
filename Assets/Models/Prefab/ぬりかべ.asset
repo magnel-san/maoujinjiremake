@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DemonLordHR.Core.CharacterData
   characterName: "\u306C\u308A\u304B\u3079"
   genre: 8
-  characterPrefab: {fileID: 2355886960860292721, guid: 8d090c23a8593b74995fcf5628e4f101, type: 3}
-  salary: 0
-  attackPower: 0
+  characterPrefab: {fileID: 1469770081206218182, guid: bdb2c4bcc1b23a64ea5eaaae8d8c0e3f, type: 3}
+  salary: 620
+  attackPower: 770
   resumePages:
-  - {fileID: 21300000, guid: 35804f1c11043564286b7db6cc76b289, type: 3}
-  - {fileID: 21300000, guid: bf05b527b081c874f81222dfbec00553, type: 3}
+  - {fileID: 21300000, guid: 5ca11335f166a7743acf998d8bc4ae68, type: 3}
+  - {fileID: 21300000, guid: d142182296674da4bb812db9f78b0acc, type: 3}
   aiPromptFragment: 

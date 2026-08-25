@@ -1,0 +1,12 @@
+{
+    "asset": "96685226a2839f347a7a030a5fe937dd",
+    "fileName": "01a02d80-278f-7817-a6c8-6b1b11fc18bf_Preview.png",
+    "prompt": "A high-quality panoramic HDRI skybox texture for Unity, seamless looping horizontally. Dark fantasy demon world, deep ominous dark red and crimson night sky with turbulent dark clouds. A giant glowing eerie full moon shines through the clouds. Dozens of silhouettes of bats flying and fluttering across the sky. Low flat horizon line.",
+    "negativePrompt": "",
+    "model": "gemini-3.1-flash-texture",
+    "modelName": "Gemini 3.1 Nano Banana 2",
+    "customSeed": 1971185185,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation"
+}

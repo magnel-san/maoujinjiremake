@@ -15,9 +15,9 @@ MonoBehaviour:
   characterName: UFO
   genre: 1
   characterPrefab: {fileID: 4286767482902909677, guid: 1261d898d37ba7d48b4bc3c44da38c53, type: 3}
-  salary: 0
-  attackPower: 0
+  salary: 680
+  attackPower: 850
   resumePages:
-  - {fileID: 21300000, guid: 35804f1c11043564286b7db6cc76b289, type: 3}
-  - {fileID: 21300000, guid: bf05b527b081c874f81222dfbec00553, type: 3}
+  - {fileID: 21300000, guid: 7cc11b77686d5864ea8f7ac4fa064b37, type: 3}
+  - {fileID: 21300000, guid: daa7bb82d2a3cf640b907e3b5dbebd18, type: 3}
   aiPromptFragment: 
