@@ -112,6 +112,10 @@ namespace DemonLordHR.Minigames
       if (_runnerInstance != null) Destroy(_runnerInstance);
       _runnerInstance = null;
       DespawnLineup(_remainingLineup);
+
+      // 走者を追ってカメラ(playerRoot)も城門付近まで進んでいるため、結果表示(ShowResult)は
+      // 元のスタート地点（このミニゲーム開始時のワープ位置）へ戻してから見せる。
+      if (playerRoot != null) playerRoot.position = _baseCameraPosition;
     }
 
     private void Update()

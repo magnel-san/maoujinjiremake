@@ -192,13 +192,7 @@ namespace DemonLordHR.Core
       if (originalPlayerPosition.HasValue) _playerRoot.position = originalPlayerPosition.Value;
       if (_handTrackingController != null) _handTrackingController.HandsVisible = true;
 
-      CurrentState = GameState.FinalBattle;
-      if (_finalBattleController != null)
-      {
-        _finalBattleController.SetHeroConditionFromMinigameResults(_defenseSuccessCount, _gameOverCount);
-        yield return _finalBattleController.RunAsync();
-      }
-
+      // 最終決戦（勇者との連打勝負）は行わず、ミニゲーム終了後は直接エンディングへ進む。
       CurrentState = GameState.Ending;
       if (_endingController != null)
       {

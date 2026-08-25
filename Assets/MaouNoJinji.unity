@@ -3361,7 +3361,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 231202034}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Ending
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3382,7 +3382,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1454572517}
-  - {fileID: 1897482937}
   m_Father: {fileID: 837406136}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &232421278
@@ -6617,7 +6616,7 @@ GameObject:
   - component: {fileID: 519460619}
   - component: {fileID: 519460621}
   - component: {fileID: 519460620}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: ResultText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6631,16 +6630,16 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519460618}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: 0.00000004371139, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.0288382, y: 1.0288382, z: 1.0288382}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1897482937}
+  m_Father: {fileID: 1540701103}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -410}
+  m_AnchoredPosition: {x: 0, y: -421.82364}
   m_SizeDelta: {x: 1400, y: 300}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &519460620
@@ -12373,7 +12372,7 @@ MonoBehaviour:
   obstacleSpawnInterval: 4
   gapCenterMinY: -60
   gapCenterMaxY: 75
-  gapMargin: 20
+  gapMargin: 50
   pipeWidth: 20
   pipeDepth: 5
   pipeOverhang: 200
@@ -15011,7 +15010,7 @@ GameObject:
   - component: {fileID: 1386379561}
   - component: {fileID: 1386379563}
   - component: {fileID: 1386379562}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: ResultImage
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -15025,16 +15024,16 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1386379560}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: 0.00000004371139, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.0288382, y: 1.0288382, z: 1.0288382}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1897482937}
+  m_Father: {fileID: 1540701103}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -100}
+  m_AnchoredPosition: {x: 0, y: -102.88382}
   m_SizeDelta: {x: 700, y: 500}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1386379562
@@ -15736,7 +15735,7 @@ GameObject:
   - component: {fileID: 1425081816}
   - component: {fileID: 1425081818}
   - component: {fileID: 1425081817}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: ScoreBreakdownText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -15750,16 +15749,16 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1425081815}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: 0.00000004371139, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.0288382, y: 1.0288382, z: 1.0288382}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1897482937}
+  m_Father: {fileID: 1540701103}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 300}
+  m_AnchoredPosition: {x: 0, y: 308.65143}
   m_SizeDelta: {x: 1400, y: 300}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1425081817
@@ -16355,7 +16354,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1454572517}
   - component: {fileID: 1454572518}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: EndingController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -16399,14 +16398,17 @@ MonoBehaviour:
   _resultImageThresholds:
   - minScore: 0
     image: {fileID: 21300000, guid: 7136952da431f0c4a8ebeeb4e2784ebc, type: 3}
-    resultText: "\u9B54\u738B\u304C\u7389\u5EA7\u304B\u3089\u7ACB\u3061\u4E0A\u304C\u308B\u3002\r\n\u9B54\u738B\u300C\u2026\u2026\u6765\u305F\u304B\u3001\u52C7\u8005\u3088\u3002\u300D\r\n\u9B54\u738B\u57CE\u306E\u6249\u304C\u958B\u304D\u3001\u307C\u308D\u307C\u308D\u306B\u306A\u3063\u305F\u52C7\u8005\u304C\u73FE\u308C\u308B\u3002\r\n\u52C7\u8005\u300C\u2026\u2026\u9B54\u738B\u3002\u3064\u3044\u306B\u3053\u3053\u307E\u3067\u6765\u305F\u305E\u3002\u300D\r\n\u9B54\u738B\u300C\u305D\u306E\u59FF\u2026\u2026\u6211\u304C\u90E8\u4E0B\u305F\u3061\u3092\u7A81\u7834\u3057\u3066\u304D\u305F\u3068\u3044\u3046\u306E\u304B\uFF1F\u300D\r\n\u52C7\u8005\u300C\u3042\u3042\u2026\u2026\u3002\u3060\u304C\u3001\u307E\u3060\u6226\u3048\u308B\u3002\u300D\r\n\u9B54\u738B\u300C\u2026\u2026\u3075\u3063\u3002\u3088\u304F\u305E\u3053\u3053\u307E\u3067\u8FBF\u308A\u7740\u3044\u305F\u3002\u300D\r\n\u52C7\u8005\u300C\u304A\u524D\u3092\u5012\u3057\u3066\u3001\u3053\u306E\u6226\u3044\u3092\u7D42\u308F\u3089\u305B\u308B\uFF01\u300D\r\n\u9B54\u738B\u300C\u306A\u3089\u3070\u6765\u3044\u3001\u52C7\u8005\u3088\u3002\u3053\u3053\u304C\u8CB4\u69D8\u306E\u6700\u5F8C\u306E\u6226\u5834\u3060\u3002\u300D\r\n\u52C7\u8005\u300C\u671B\u3080\u3068\u3053\u308D\u3060\uFF01\u300D\r\n\u9B54\u738B\u3068\u52C7\u8005\u304C\u5411\u304B\u3044\u5408\u3046\u3002\r\n\u2015\u2015\u3053\u3046\u3057\u3066\u3001\u4E16\u754C\u306E\u547D\u904B\u3092\u61F8\u3051\u305F\u6700\u7D42\u6C7A\u6226\u304C\u59CB\u307E\u3063\u305F\u3002"
+    resultText: "\u9B54\u738B\u57CE\u306E\u6249\u304C\u958B\u304D\u3001\u7121\u50B7\u306E\u52C7\u8005\u304C\u73FE\u308C\u308B\u3002\r\n\u90E8\u4E0B\u3068\u306E\u6226\u95D8\u3067\u3081\u3061\u3083\u304F\u3061\u3083\u30D1\u30EF\u30FC\u30A2\u30C3\u30D7\u3057\u3057\u305F\u3088\u3046\u306B\u898B\u3048\u308B\r\n\u9B54\u738B\u300C\u2026\u2026\u52C7\u8005\u2026\u2026\u3060\u3068\u2026\u2026\uFF1F\u300D\r\n\u52C7\u8005\u300C\u305D\u3046\u3060\u3002\u304A\u524D\u3092\u5012\u3057\u306B\u6765\u305F\u3002\u300D\r\n\u9B54\u738B\u300C\u305D\u3093\u306A\u2026\u2026\u99AC\u9E7F\u306A\u2026\u2026\u3002\u3042\u308C\u3060\u3051\u306E\u90E8\u4E0B\u3092\u5012\u3057\u3066\u3001\u3053\u3053\u307E\u3067\u2026\u2026\u3002\u300D\r\n\u52C7\u8005\u300C\u7D42\u308F\u308A\u3060\u3001\u9B54\u738B\u3002\u300D\r\n\u9B54\u738B\u300C\u307E\u3001\u5F85\u3066\u2026\u2026\uFF01\u3000\u3044\u3084\u2026\u2026\u79C1\u306F\u9B54\u738B\u3060\uFF01\u3000\u3053\u306E\u7A0B\u5EA6\u3067\u602F\u3080\u308F\u3051\u306B\u306F\u2026\u2026\uFF01\u300D\r\n\u52C7\u8005\u300C\u306A\u3089\u3001\u6226\u304A\u3046\u3002\u300D\r\n\u9B54\u738B\u300C\u2026\u2026\u6765\u308B\u304C\u3044\u3044\u3002\u6016\u304F\u306A\u3069\u2026\u2026\u306A\u3044\u3002\u6016\u304F\u306A\u3069\u3001\u306A\u3044\u305E\u2026\u2026\uFF01\u300D\r\n\u30FC\u30FC\u3053\u3046\u3057\u3066\u52C7\u8005\u306B\u3088\u308B\u4E00\u65B9\u7684\u306A\u60E8\u6BBA\u304C\u59CB\u307E\u3063\u305F\u3002"
   - minScore: 1000
+    image: {fileID: 21300000, guid: c92122903ad1f524cbebf4529216c254, type: 3}
+    resultText: "\u9B54\u738B\u304C\u7389\u5EA7\u304B\u3089\u7ACB\u3061\u4E0A\u304C\u308B\u3002\r\n\u9B54\u738B\u300C\u2026\u2026\u6765\u305F\u304B\u3001\u52C7\u8005\u3088\u3002\u300D\r\n\u9B54\u738B\u57CE\u306E\u6249\u304C\u958B\u304D\u3001\u307C\u308D\u307C\u308D\u306B\u306A\u3063\u305F\u52C7\u8005\u304C\u73FE\u308C\u308B\u3002\r\n\u52C7\u8005\u300C\u2026\u2026\u9B54\u738B\u3002\u3064\u3044\u306B\u3053\u3053\u307E\u3067\u6765\u305F\u305E\u3002\u300D\r\n\u9B54\u738B\u300C\u305D\u306E\u59FF\u2026\u2026\u6211\u304C\u90E8\u4E0B\u305F\u3061\u3092\u7A81\u7834\u3057\u3066\u304D\u305F\u3068\u3044\u3046\u306E\u304B\uFF1F\u300D\r\n\u52C7\u8005\u300C\u3042\u3042\u2026\u2026\u3002\u3060\u304C\u3001\u307E\u3060\u6226\u3048\u308B\u3002\u300D\r\n\u9B54\u738B\u300C\u2026\u2026\u3075\u3063\u3002\u3088\u304F\u305E\u3053\u3053\u307E\u3067\u8FBF\u308A\u7740\u3044\u305F\u3002\u300D\r\n\u52C7\u8005\u300C\u304A\u524D\u3092\u5012\u3057\u3066\u3001\u3053\u306E\u6226\u3044\u3092\u7D42\u308F\u3089\u305B\u308B\uFF01\u300D\r\n\u9B54\u738B\u300C\u306A\u3089\u3070\u6765\u3044\u3001\u52C7\u8005\u3088\u3002\u3053\u3053\u304C\u8CB4\u69D8\u306E\u6700\u5F8C\u306E\u6226\u5834\u3060\u3002\u300D\r\n\u52C7\u8005\u300C\u671B\u3080\u3068\u3053\u308D\u3060\uFF01\u300D\r\n\u9B54\u738B\u3068\u52C7\u8005\u304C\u5411\u304B\u3044\u5408\u3046\u3002\r\n\u2015\u2015\u3053\u3046\u3057\u3066\u3001\u4E16\u754C\u306E\u547D\u904B\u3092\u61F8\u3051\u305F\u6700\u7D42\u6C7A\u6226\u304C\u59CB\u307E\u3063\u305F\u3002"
+  - minScore: 2000
     image: {fileID: 21300000, guid: 5aab2a6a1f4acfe4f8fb7ac6cb040f8d, type: 3}
     resultText: "\u9B54\u738B\u304C\u7389\u5EA7\u304B\u3089\u7ACB\u3061\u4E0A\u304C\u308B\u3002\r\n\u9B54\u738B\u300C\u2026\u2026\u6765\u305F\u304B\u3001\u52C7\u8005\u3088\u3002\u3064\u3044\u306B\u6211\u304C\u9B54\u738B\u57CE\u3078\u2015\u2015\u300D\r\n\u9B54\u738B\u57CE\u306E\u6249\u304C\u3086\u3063\u304F\u308A\u958B\u304F\u3002\r\n\u52C7\u8005\u300C\u2026\u2026\u3002\u300D\r\n\u52C7\u8005\u304C\u9B54\u738B\u306E\u524D\u306B\u73FE\u308C\u308B\u3002\u670D\u306F\u6C5A\u308C\u3001\u88C5\u5099\u3082\u5168\u640D\u3002\u30D1\u30F3\u30C4\u3057\u304B\u5C65\u3044\u3066\u306A\u3044\u3002\u660E\u3089\u304B\u306B\u9577\u3044\u6226\u3044\u3092\u304F\u3050\u308A\u629C\u3051\u3066\u304D\u305F\u69D8\u5B50\u3060\u3002\r\n\u9B54\u738B\u300C\u2026\u2026\u52C7\u8005\uFF1F\u300D\r\n\u52C7\u8005\u300C\u2026\u2026\u9B54\u738B\u3002\u3053\u3053\u307E\u3067\u6765\u305F\u305E\u3002\u300D\r\n\u9B54\u738B\u300C\u2026\u2026\u305D\u306E\u59FF\u3067\u3001\u307E\u3060\u6226\u3046\u3064\u3082\u308A\u304B\uFF1F\u300D\r\n\u52C7\u8005\u300C\u3042\u3042\u3002\u304A\u524D\u3092\u5012\u3059\u307E\u3067\u306F\u2026\u2026\u7D42\u308F\u308C\u306A\u3044\u3002\u300D\r\n\u9B54\u738B\u306F\u52C7\u8005\u306E\u59FF\u3092\u898B\u3064\u3081\u3001\u5C11\u3057\u3060\u3051\u8868\u60C5\u3092\u66C7\u3089\u305B\u308B\u3002\r\n\u9B54\u738B\u300C\u2026\u2026\u306A\u308B\u307B\u3069\u3002\u305D\u3053\u307E\u3067\u3057\u3066\u3001\u79C1\u306E\u3068\u3053\u308D\u307E\u3067\u6765\u305F\u304B\u3002\u300D\r\n\u52C7\u8005\u300C\u899A\u609F\u3057\u308D\u3001\u9B54\u738B\u3002\u300D\r\n\u9B54\u738B\u300C\u2026\u2026\u6765\u3044\u3001\u52C7\u8005\u3088\u3002\u6700\u5F8C\u306E\u6226\u3044\u3060\u3002\u300D\r\n\u30FC\u30FC\u3053\u3046\u3057\u3066\u9B54\u738B\u306B\u3088\u308B\u4E00\u65B9\u7684\u306A\u60E8\u6BBA\u304C\u59CB\u307E\u3063\u305F\u3002"
-  - minScore: 2000
+  - minScore: 3000
     image: {fileID: 21300000, guid: 9e95b07fccc878c41a595806f1cc6fe2, type: 3}
     resultText: "\u9B54\u738B\u300C\u2026\u2026\u6765\u305F\u304B\u3001\u52C7\u8005\u3088\u3002\u3064\u3044\u306B\u6211\u304C\u9B54\u738B\u57CE\u3078\u2015\u2015\u300D\r\n\u9B54\u738B\u304C\u7389\u5EA7\u304B\u3089\u7ACB\u3061\u4E0A\u304C\u308B\u3002\r\n\u9B54\u738B\u300C\u2026\u2026\u3080\uFF1F\u300D\r\n\u9B54\u738B\u57CE\u306E\u6249\u304C\u3086\u3063\u304F\u308A\u958B\u304F\u3002\r\n\u52C7\u8005\u300C\u2026\u2026\u306F\u3041\u2026\u2026\u306F\u3041\u2026\u2026\u3002\u300D\r\n\u52C7\u8005\u304C\u3075\u3089\u3075\u3089\u3057\u306A\u304C\u3089\u8056\u5263\u3092\u6756\u306B\u3057\u3066\u3001\u9B54\u738B\u306E\u9593\u3078\u5165\u3063\u3066\u304F\u308B\u3002\r\n\u305D\u306E\u8DB3\u53D6\u308A\u306F\u3055\u306A\u304C\u3089\u304A\u3058\u3044\u3061\u3083\u3093\u306E\u3088\u3046\u3060\u3063\u305F\u3002\r\n\u9B54\u738B\u300C\u2026\u2026\u52C7\u8005\uFF1F\u300D\r\n\u52C7\u8005\u300C\u2026\u2026\u9B54\u738B\u2026\u2026\u3002\u300D\r\n\u9B54\u738B\u300C\u304A\u3001\u304A\u3044\u2026\u2026\u5927\u4E08\u592B\u304B\uFF1F\u300D\r\n\u52C7\u8005\u300C\u5927\u4E08\u592B\u2026\u2026\u3060\u2026\u2026\u3002\u300D\r\n\u52C7\u8005\u306F\u4E00\u6B69\u9032\u3080\u304C\u3001\u8DB3\u5143\u304C\u3075\u3089\u3064\u304F\u3002\r\n\u9B54\u738B\u300C\u3069\u3046\u898B\u3066\u3082\u5927\u4E08\u592B\u3067\u306F\u306A\u3044\u305E\u2026\u2026\u3002\u300D\r\n\u52C7\u8005\u300C\u3053\u3053\u307E\u3067\u2026\u2026\u6765\u305F\u3093\u3060\u2026\u2026\u3002\u304A\u524D\u3060\u3051\u306F\u2026\u2026\u4FFA\u304C\u5012\u3059\u2026\u2026\u3002\u300D\r\n\u52C7\u8005\u306F\u69CB\u3048\u3088\u3046\u3068\u3057\u3066\u3001\u8DB3\u306E\u529B\u304C\u629C\u3051\u7247\u819D\u3092\u3064\u304F\u3002\r\n\u4ED5\u65B9\u306A\u304F\u3001\u8056\u5263\u3092\u6756\u306B\u3057\u3066\u304B\u308D\u3046\u3058\u3066\u7ACB\u3061\u4E0A\u304C\u308B\u3002\r\n\u8DB3\u306F\u30D7\u30EB\u30D7\u30EB\u9707\u3048\u7ACB\u3063\u3066\u3044\u308B\u306E\u3067\u3084\u3063\u3068\u306E\u3088\u3046\u3060\u3002\r\n\u3053\u306E\u72B6\u614B\u3067\u3069\u3046\u3084\u3063\u3066\u6226\u3046\u3068\u3044\u3046\u306E\u304B\r\n\u52C7\u8005\u300C\u899A\u609F\u3057\u308D\uFF01\u9B54\u738B\uFF01\u300D\r\n\u3055\u3042\u3001\u6700\u7D42\u6C7A\u6226\u3060"
-  - minScore: 3000
+  - minScore: 3500
     image: {fileID: 21300000, guid: 0bece27faf8b2f04baee17bad2acddf4, type: 3}
     resultText: "\u52C7\u8005\u304C\u3082\u306E\u3059\u3054\u3044\u52E2\u3044\u3067\u8FEB\u3063\u3066\u304F\u308B\u6C17\u914D\u304C\u3059\u308B\r\n\u9B54\u738B\u300C\u6765\u308B\u2026\u2026\uFF01\u300D\r\n\u52C7\u8005\u300C\u3046\u308F\u3042\u3042\u3042\u3042\u3042\u3042\u3042\u3063\uFF01\uFF01\u300D\r\n\u30C9\u30A9\u30A9\u30A9\u30F3\uFF01\uFF01\r\n\u52C7\u8005\u304C\u52E2\u3044\u3088\u304F\u5439\u304D\u98DB\u3070\u3055\u308C\u3001\u30E4\u30E0\u30C1\u30E3\u3057\u3066\u3044\u305F\u3002\r\n\u9B54\u738B\u300C\u2026\u2026\u2026\u2026\u3002\u300D\r\n\u52C7\u8005\u300C\u3044\u3063\u3066\u3047\u2026\u2026\u3002\u304F\u305D\u2026\u2026\u3042\u3044\u3064\u3001\u5F37\u3059\u304E\u308B\u2026\u2026\u3002\u300D\r\n\u9B54\u738B\u300C\u304A\u3001\u304A\u3044\u2026\u2026\u52C7\u8005\uFF1F\u300D\r\n\u52C7\u8005\u300C\u2026\u2026\u9B54\u738B\u304B\uFF1F\u300D\r\n\u9B54\u738B\u300C\u305D\u3046\u3060\u300D\r\n\u52C7\u8005\u300C\uFF01\u899A\u609F\u3057\u2026\u2026\u308D\u2026\u2026\u3002\u300D\r\n\u305D\u3046\u8A00\u3063\u3066\u7ACB\u3061\u3042\u304C\u308D\u3046\u3068\u3059\u308B\r\n\u30D0\u30BF\u30C3\r\n\u9B54\u738B\u300C\u2026\u2026\u2026\u2026\u3002\u300D\r\n\u52C7\u8005\u300C\u2026\u2026\u2026\u2026\u3002\u300D\r\n\u52C7\u8005\u300C\u4FFA\u306F\u2026\u2026\u3082\u3046\u2026\u2026\u9650\u754C\u2026\u2026\u3002\u300D\r\n\u9B54\u738B\u300C\u304A\u3001\u304A\u3044\uFF1F\u300D\r\n\u52C7\u8005\u300C\u9B54\u738B\u2026\u2026\u304A\u524D\u306F\u2026\u2026\u4FFA\u304C\u2026\u2026\u5FC5\u305A\u2026\u2026\u300D\r\n\u30D0\u30BF\u30C3\r\n\u52C7\u8005\u306F\u305D\u306E\u5834\u306B\u5012\u308C\u308B\u3002\r\n\u9B54\u738B\u3067\u3059\u3089\u306A\u3044\u90E8\u4E0B\u306B\u5012\u3055\u308C\u308B\u3001\u304B\u3064\u3066\u3053\u3093\u306A\u9593\u629C\u3051\u306A\u52C7\u8005\u304C\u3044\u305F\u3060\u308D\u3046\u304B\u3002\r\n\u3053\u3046\u3057\u3066\u52C7\u8005\u8A0E\u4F10\u306F\u679C\u305F\u3055\u308C\u305F\u3002"
 --- !u!1 &1458497522
@@ -17138,6 +17140,9 @@ RectTransform:
   - {fileID: 1013268053}
   - {fileID: 1565594758}
   - {fileID: 2084717813}
+  - {fileID: 1425081816}
+  - {fileID: 1386379561}
+  - {fileID: 519460619}
   m_Father: {fileID: 837406136}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -20476,7 +20481,7 @@ MonoBehaviour:
     minigame: {fileID: 505549755}
   - genre: 8
     minigame: {fileID: 766603948}
-  _debugStartFromMinigame: 1
+  _debugStartFromMinigame: 0
   _debugGenre: 7
   _debugHiredCharacters:
   - {fileID: 11400000, guid: 996257ea3b2383c4f9a97843dfc3ffc9, type: 2}
@@ -21053,69 +21058,6 @@ MonoBehaviour:
   _resumePrefab: {fileID: 6790205939971347944, guid: d60a7887c83876a45bc63a5dada0c36b, type: 3}
   _resumeLocalOffset: {x: 0, y: 1.2, z: 0.5}
   _resumeParent: {fileID: 1540701103}
---- !u!1 &1897482936
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1897482937}
-  - component: {fileID: 1897482938}
-  m_Layer: 0
-  m_Name: UI
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1897482937
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1897482936}
-  m_LocalRotation: {x: -0, y: 1, z: -0, w: -0.00000004371139}
-  m_LocalPosition: {x: 0, y: 0, z: 20}
-  m_LocalScale: {x: 0.11, y: 0.11, z: 0.11}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1425081816}
-  - {fileID: 1386379561}
-  - {fileID: 519460619}
-  m_Father: {fileID: 231202034}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 30}
-  m_SizeDelta: {x: 1920, y: 1080}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!223 &1897482938
-Canvas:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1897482936}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_RenderMode: 2
-  m_Camera: {fileID: 1317193723}
-  m_PlaneDistance: 100
-  m_PixelPerfect: 0
-  m_ReceivesEvents: 1
-  m_OverrideSorting: 0
-  m_OverridePixelPerfect: 0
-  m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
-  m_UseReflectionProbes: 0
-  m_AdditionalShaderChannelsFlag: 25
-  m_UpdateRectTransformForStandalone: 0
-  m_SortingLayerID: 0
-  m_SortingOrder: 0
-  m_TargetDisplay: 0
 --- !u!1 &1902874679
 GameObject:
   m_ObjectHideFlags: 0

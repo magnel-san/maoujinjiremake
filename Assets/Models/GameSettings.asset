@@ -31,7 +31,7 @@ MonoBehaviour:
   hiredLineupMoveDuration: 1.5
   rejectKnockbackDuration: 0.6
   characterEntryDuration: 4
-  defaultMinigameTimeLimit: 60
+  defaultMinigameTimeLimit: 40
   resultDisplaySeconds: 3
   finalBattleMaxHp: 1000
   finalBattlePunchDamage: 20
