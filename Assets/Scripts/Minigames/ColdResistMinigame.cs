@@ -59,6 +59,16 @@ namespace DemonLordHR.Minigames
     [Tooltip("スタン中に表示するUI（任意）")]
     [SerializeField] private GameObject stunIndicator;
 
+    [Header("上から見る視点への対応")]
+    [Tooltip("applyWarpRotationで見下ろし視点にする場合に使う、UI(Canvas)のtransform。" +
+      "CanvasはPlayerの子ではなくワールド固定で置かれているため、カメラ(Player)だけ傾けると" +
+      "Canvasに正対しなくなり歪んで見えてしまう。ここを設定しておくと、ワープ時にプレイヤーの" +
+      "向きへ自動的に正対させ直し、ミニゲーム終了後は元の向きに戻す。未設定（＝見下ろし視点を" +
+      "使わない）なら何もしない。")]
+    [SerializeField] private Transform uiCanvasTransform;
+    [Tooltip("uiCanvasTransformを、プレイヤーの正面方向にどれだけ離して置き直すか。")]
+    [SerializeField] private float uiDistanceFromPlayer = 100f;
+
     private CharacterData _defender;
     private GameObject _defenderInstance;
     private readonly List<GameObject> _remainingLineup = new List<GameObject>();
@@ -66,6 +76,9 @@ namespace DemonLordHR.Minigames
     private float _spawnTimer;
     private float _stunTimer;
     private bool _cursorTrackingEnabled;
+    private Vector3 _originalUiPosition;
+    private Quaternion _originalUiRotation;
+    private bool _uiTransformCached;
 
     public int CurrentLane { get; private set; } = 1; // 0=左,1=中央,2=右
     public float Score { get; private set; }
@@ -81,6 +94,51 @@ namespace DemonLordHR.Minigames
       SpawnDefender();
       RefreshRemainingLineup();
       _cursorTrackingEnabled = true; // 練習中もカーソル追従でレーン移動を試せるようにする
+      ReorientUiToMatchPlayer();
+    }
+
+    private void OnEnable()
+    {
+      OnMinigameFinished += HandleMinigameFinishedRestoreUi;
+    }
+
+    private void OnDisable()
+    {
+      OnMinigameFinished -= HandleMinigameFinishedRestoreUi;
+    }
+
+    private void HandleMinigameFinishedRestoreUi(MinigameResult finalResult)
+    {
+      RestoreUiTransform();
+    }
+
+    /// <summary>Player(カメラ)がapplyWarpRotationで傾いている場合、UI Canvasも同じ向きへ
+    /// 正対させ直す。初回だけ元のposition/rotationを覚えておき、ミニゲーム終了後
+    /// （OnMinigameFinished、＝RestorePlayerRotationで向きが戻った後）に元へ戻す。</summary>
+    private void ReorientUiToMatchPlayer()
+    {
+      if (uiCanvasTransform == null || playerRoot == null) return;
+
+      if (!_uiTransformCached)
+      {
+        _originalUiPosition = uiCanvasTransform.position;
+        _originalUiRotation = uiCanvasTransform.rotation;
+        _uiTransformCached = true;
+      }
+
+      // Main CameraはPlayerに対して常にY180°のローカルオフセットを持つ（このプロジェクト全体の規約）ため、
+      // Canvasを実際のカメラ正面へ向けるにはこのオフセットを合成する必要がある。
+      var cameraFacing = playerRoot.rotation * Quaternion.Euler(0f, 180f, 0f);
+      uiCanvasTransform.rotation = cameraFacing;
+      uiCanvasTransform.position = playerRoot.position + cameraFacing * Vector3.forward * uiDistanceFromPlayer;
+    }
+
+    private void RestoreUiTransform()
+    {
+      if (!_uiTransformCached || uiCanvasTransform == null) return;
+      uiCanvasTransform.position = _originalUiPosition;
+      uiCanvasTransform.rotation = _originalUiRotation;
+      _uiTransformCached = false;
     }
 
     protected override void OnMinigameStart()
