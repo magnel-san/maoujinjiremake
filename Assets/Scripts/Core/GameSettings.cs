@@ -60,6 +60,8 @@ namespace DemonLordHR.Core
     [Header("ミニゲーム共通")]
     [Tooltip("各ミニゲームの制限時間（既定値。ジャンルごとに上書き可）")]
     public float defaultMinigameTimeLimit = 60f;
+    [Tooltip("ミニゲーム終了時、結果（防衛成功/ゲームオーバー＋スコア）を表示しておく秒数")]
+    public float resultDisplaySeconds = 3f;
 
     [Header("最終決戦")]
     public float finalBattleMaxHp = 1000f;

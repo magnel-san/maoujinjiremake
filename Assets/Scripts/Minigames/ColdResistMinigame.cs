@@ -50,6 +50,10 @@ namespace DemonLordHR.Minigames
     [Header("被弾ペナルティ")]
     [SerializeField] private float stunSeconds = 2f;
 
+    [Tooltip("回避1回あたりのスコア加算＝合計攻撃力×この係数。他ジャンルとスコア水準を揃えるための調整値" +
+      "（詳細はSwimMinigame.scoreMultiplierのコメント参照）。")]
+    [SerializeField] private float scoreMultiplier = 0.0286f;
+
     [Header("UI")]
     [SerializeField] private TMP_Text scoreText;
     [Tooltip("スタン中に表示するUI（任意）")]
@@ -231,9 +235,11 @@ namespace DemonLordHR.Minigames
     /// <summary>回避成功時に呼ばれる。</summary>
     private void RegisterDodge()
     {
-      Score += totalAttackPower;
+      Score += totalAttackPower * scoreMultiplier;
       UpdateScoreText();
     }
+
+    protected override float GetFinalScore() => Score;
 
     /// <summary>被弾時に呼ばれる。即ゲームオーバーにはせず、数秒スタンさせる。</summary>
     private void RegisterHit()

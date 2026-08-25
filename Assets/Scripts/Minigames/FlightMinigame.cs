@@ -85,6 +85,9 @@ namespace DemonLordHR.Minigames
     [Header("UI")]
     [Tooltip("通過数・スコアを表示するテキスト")]
     [SerializeField] private TMP_Text obstaclesPassedText;
+    [Tooltip("通過1回あたりのスコア加算＝合計攻撃力×この係数。他ジャンルとスコア水準を揃えるための調整値" +
+      "（詳細はSwimMinigame.scoreMultiplierのコメント参照）。")]
+    [SerializeField] private float scoreMultiplier = 0.0769f;
 
     private CharacterData _pilot;
     private GameObject _pilotInstance;
@@ -471,9 +474,11 @@ namespace DemonLordHR.Minigames
     private void HandleObstaclePassed()
     {
       ObstaclesPassed++;
-      Score += totalAttackPower;
+      Score += totalAttackPower * scoreMultiplier;
       UpdateScoreText();
     }
+
+    protected override float GetFinalScore() => Score;
 
     private void SetObstaclesMoving(bool moving)
     {

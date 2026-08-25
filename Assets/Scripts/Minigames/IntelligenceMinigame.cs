@@ -38,6 +38,10 @@ namespace DemonLordHR.Minigames
     [SerializeField] private PointerController pointerController;
     [SerializeField] private GameObject customPointerVisualPrefab;
 
+    [Tooltip("五芒星1回成功あたりのスコア加算＝合計攻撃力×この係数。他ジャンルとスコア水準を揃えるための" +
+      "調整値（詳細はSwimMinigame.scoreMultiplierのコメント参照）。")]
+    [SerializeField] private float scoreMultiplier = 0.125f;
+
     public float Score { get; private set; }
     public int CompletionCount { get; private set; }
 
@@ -91,10 +95,11 @@ namespace DemonLordHR.Minigames
 
       if (!_mistakeMade && _nextExpectedStep >= PentagramOrder.Length)
       {
-        Score += totalAttackPower;
+        var gained = totalAttackPower * scoreMultiplier;
+        Score += gained;
         CompletionCount++;
         UpdateScoreText();
-        Debug.Log($"[Intelligence] 成功！ スコア+{totalAttackPower} 合計={Score}");
+        Debug.Log($"[Intelligence] 成功！ スコア+{gained} 合計={Score}");
       }
       else
       {
@@ -103,6 +108,8 @@ namespace DemonLordHR.Minigames
 
       ResetTrace();
     }
+
+    protected override float GetFinalScore() => Score;
 
     /// <summary>両手を合わせた（成功・失敗いずれの場合も）際に呼ぶ、状態の完全リセット。
     /// なぞり進捗を0に戻すだけでなく、各ノードの色をidleへ戻し、案内線も引き直して

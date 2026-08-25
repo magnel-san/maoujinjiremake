@@ -58,6 +58,10 @@ namespace DemonLordHR.Minigames
     [Header("UI")]
     [SerializeField] private TMP_Text magmaGaugeText;
 
+    [Tooltip("バルブ1周あたりのスコア加算＝合計攻撃力×この係数。他ジャンルとスコア水準を揃えるための調整値" +
+      "（詳細はSwimMinigame.scoreMultiplierのコメント参照）。")]
+    [SerializeField] private float scoreMultiplier = 0.0333f;
+
     [Header("デバッグ")]
     [Tooltip("ONの間、バルブの回転が反応しない原因切り分け用に一定間隔でコンソールへ状態を出す。")]
     [SerializeField] private bool _debugLogValveState;
@@ -198,10 +202,12 @@ namespace DemonLordHR.Minigames
 
     private void RegisterValveTurn()
     {
-      TotalMagma += totalAttackPower;
+      TotalMagma += totalAttackPower * scoreMultiplier;
       SpawnMagmaObject();
       UpdateGaugeText();
     }
+
+    protected override float GetFinalScore() => TotalMagma;
 
     /// <summary>練習中：バルブ回しの動作自体は試せるが、マグマは実際には蓄積されない。</summary>
     private void SpawnPracticeMagma()

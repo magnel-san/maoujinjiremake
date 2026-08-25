@@ -11,6 +11,10 @@ namespace DemonLordHR.Minigames
   {
     [SerializeField] private float _heroApproachSpeed = 0.05f; // 0(遠い)〜1(目前)
     [SerializeField] private float _heroPushBackPerHit = 0.15f;
+    [Tooltip("命中1回あたりのスコア加算＝合計攻撃力×この係数。制限時間内に達成できる命中回数の目安(約40回)の" +
+      "逆数にしてあり、ヒット数がジェスチャーのクールダウンだけで頭打ちになる遊泳/戦闘/労働系ジャンルの" +
+      "スコアを、他ジャンルと同じ「合計攻撃力を基準値とした水準」に揃えるためのもの。")]
+    [SerializeField] private float scoreMultiplier = 0.025f;
 
     [Header("勇者オブジェクト")]
     [Tooltip("勇者本体。接近度(0〜1)に応じてheroFarPoint〜heroNearPointの間を移動させる。")]
@@ -75,10 +79,12 @@ namespace DemonLordHR.Minigames
     /// <summary>波が実際に勇者へ命中した瞬間に呼ばれる（WaveProjectile経由）。</summary>
     private void HandleWaveHit()
     {
-      TotalDamage += totalAttackPower;
+      TotalDamage += totalAttackPower * scoreMultiplier;
       HeroProximity01 = Mathf.Clamp01(HeroProximity01 - _heroPushBackPerHit);
       UpdateHeroVisual();
     }
+
+    protected override float GetFinalScore() => TotalDamage;
 
     private void SpawnWave(bool isPractice)
     {

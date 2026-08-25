@@ -19,6 +19,9 @@ namespace DemonLordHR.Minigames
     [SerializeField] private Transform[] baseSpawnPoints;
     [SerializeField] private int maxConcurrentBases = 3;
     [SerializeField] private float spawnInterval = 1f;
+    [Tooltip("発見1回あたりのスコア加算＝合計攻撃力×この係数。他ジャンルとスコア水準を揃えるための調整値" +
+      "（詳細はSwimMinigame.scoreMultiplierのコメント参照）。")]
+    [SerializeField] private float scoreMultiplier = 0.0333f;
 
     [Header("UI")]
     [SerializeField] private TMP_Text scoreText;
@@ -70,10 +73,12 @@ namespace DemonLordHR.Minigames
     public void RegisterBaseDiscovered()
     {
       if (!IsRunning) return;
-      Score += totalAttackPower;
+      Score += totalAttackPower * scoreMultiplier;
       BasesFound++;
       UpdateScoreText();
     }
+
+    protected override float GetFinalScore() => Score;
 
     protected override void OnGestureForMinigame(GestureType type) { }
 

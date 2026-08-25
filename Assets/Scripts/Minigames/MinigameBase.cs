@@ -69,6 +69,13 @@ namespace DemonLordHR.Minigames
     [Tooltip("残り時間を表示するテキスト。本番の制限時間カウント中だけ表示する。")]
     [SerializeField] protected TMP_Text timerText;
 
+    [Header("結果表示")]
+    [Tooltip("終了時（防衛成功／ゲームオーバーいずれも）に、GetFinalScoreの値を数秒間表示するUIのルート。" +
+      "未設定ならresultScoreText自体の表示/非表示で代用する。両方未設定なら結果表示自体を行わない。")]
+    [SerializeField] protected GameObject resultRoot;
+    [Tooltip("結果（勝敗＋スコア）を書き込むテキスト。")]
+    [SerializeField] protected TMP_Text resultScoreText;
+
     public event Action<MinigameResult> OnMinigameFinished;
 
     protected List<CharacterData> assignedCharacters = new List<CharacterData>();
@@ -91,6 +98,7 @@ namespace DemonLordHR.Minigames
       if (readyButton != null) readyButton.gameObject.SetActive(false);
       ruleImageRoot?.SetActive(false);
       if (timerText != null) timerText.gameObject.SetActive(false);
+      SetResultActive(false);
     }
 
     /// <summary>採用済みキャラのうち、このジャンルで使用するキャラを設定する。</summary>
@@ -185,11 +193,41 @@ namespace DemonLordHR.Minigames
       UnsubscribeGestures();
       if (timerText != null) timerText.gameObject.SetActive(false);
       OnMinigameEnd(result);
+      yield return ShowResult(result);
       if (!SkipGenericCharacterSummon) DespawnCharacters();
       RestorePlayerRotation();
 
       OnMinigameFinished?.Invoke(result);
     }
+
+    /// <summary>終了直後、GetFinalScoreの値を数秒間表示してから次のフェーズへ進む。
+    /// キャラの後片付け(DespawnCharacters)より前に呼ぶことで、結果を見せている間はまだ
+    /// ステージ上にキャラが残っている状態にする。</summary>
+    private IEnumerator ShowResult(MinigameResult finalResult)
+    {
+      if (resultRoot == null && resultScoreText == null) yield break;
+
+      if (resultScoreText != null)
+      {
+        var label = finalResult == MinigameResult.DefenseSuccess ? "防衛成功" : "ゲームオーバー";
+        resultScoreText.text = $"{label}\nスコア: {GetFinalScore():0}";
+      }
+      SetResultActive(true);
+
+      yield return new WaitForSeconds(settings != null ? settings.resultDisplaySeconds : 3f);
+
+      SetResultActive(false);
+    }
+
+    private void SetResultActive(bool active)
+    {
+      if (resultRoot != null) resultRoot.SetActive(active);
+      else if (resultScoreText != null) resultScoreText.gameObject.SetActive(active);
+    }
+
+    /// <summary>このミニゲームの最終スコア。派生クラスが自分のスコア/ダメージ/マグマ量等のプロパティを
+    /// 返すようオーバーライドする。既定は0（スコア概念のないジャンルの保険）。</summary>
+    protected virtual float GetFinalScore() => 0f;
 
     private void UpdateAttackPowerText()
     {

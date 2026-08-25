@@ -14,6 +14,14 @@ namespace DemonLordHR.Minigames
   public class LaborMinigame : MinigameBase
   {
     [SerializeField] private float _gaugeMax = 100f;
+    [Tooltip("ハンマー1回あたりのスコア加算＝合計攻撃力×この係数。積み上げ演出用のCurrentGauge/" +
+      "CompletedGaugeCount（合計攻撃力がgaugeMaxに対して大きいと1振りで何段も一気に積み上がる、" +
+      "見た目のペース調整用の値）とは切り離してあり、スコアは他ジャンル同様「振った回数×合計攻撃力」で" +
+      "決まる（詳細はSwimMinigame.scoreMultiplierのコメント参照）。ゲージ経由にすると、合計攻撃力が" +
+      "高いほど1振りあたりの完了回数も増えてスコアが合計攻撃力の2乗に比例してしまうため、あえて分けている。")]
+    [SerializeField] private float scoreMultiplier = 0.025f;
+
+    public float Score { get; private set; }
 
     [Header("ゲージUI")]
     [SerializeField] private Slider gaugeSlider;
@@ -38,12 +46,15 @@ namespace DemonLordHR.Minigames
 
     protected override void OnMinigameStart()
     {
+      Score = 0f;
       CurrentGauge = 0f;
       CompletedGaugeCount = 0;
       ClearStack();
       UpdateGaugeUI();
       UpdateBackground();
     }
+
+    protected override float GetFinalScore() => Score;
 
     protected override void OnMinigameEnd(MinigameResult finalResult)
     {
@@ -54,6 +65,8 @@ namespace DemonLordHR.Minigames
     protected override void OnGestureForMinigame(GestureType type)
     {
       if (type != GestureType.HammerSwingDown) return;
+
+      Score += totalAttackPower * scoreMultiplier;
 
       CurrentGauge += totalAttackPower;
       UpdateGaugeUI();

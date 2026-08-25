@@ -49,6 +49,12 @@ namespace DemonLordHR.Minigames
 
     public float DistanceTravelled { get; private set; }
 
+    /// <summary>合計攻撃力×到達距離の割合（城門に着けば満額）。他ジャンルのように「1回のアクションに
+    /// 固定額」ではなく進捗の割合で決まるのは、俊足の目標が「回数をこなす」ではなく「時間内に城門まで
+    /// 辿り着けたか」という単発の到達目標だから（詳細はSwimMinigame.scoreMultiplierのコメント参照）。
+    /// 城門に間に合わなくても、進んだ分だけスコアが入る。</summary>
+    public float Score => _trackLength > 0f ? totalAttackPower * Mathf.Clamp01(DistanceTravelled / _trackLength) : 0f;
+
     // 走者＋残りの整列を自前でスポーンするため、基底クラスの一括召喚は使わない
     // （両方動くと走者が二重に召喚されてしまう）。
     protected override bool SkipGenericCharacterSummon => true;
@@ -96,6 +102,8 @@ namespace DemonLordHR.Minigames
     {
       Advance(deltaTime, isPractice: false);
     }
+
+    protected override float GetFinalScore() => Score;
 
     protected override void OnMinigameEnd(MinigameResult finalResult)
     {
