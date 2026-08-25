@@ -19,10 +19,9 @@ MonoBehaviour:
   recruitmentCycleCount: 3
   heroIncomingDisplaySeconds: 3
   genreStartDisplaySeconds: 3
-  recruitmentPhaseFunds: 100
+  recruitmentPhaseFunds: 1000
   resumeViewHoldSeconds: 3
   resumeBackHoldSeconds: 3
-  resumeDecisionHoldSeconds: 2
   hireStampDisplaySeconds: 1.5
   rejectKnockbackForce: 8
   rejectKnockbackDirection: {x: 0, y: 0.3, z: -1}
@@ -33,8 +32,6 @@ MonoBehaviour:
   rejectKnockbackDuration: 0.6
   characterEntryDuration: 4
   defaultMinigameTimeLimit: 60
-  flightRevivalDivisor: 100
-  flightRevivalDelaySeconds: 1
   finalBattleMaxHp: 1000
   finalBattlePunchDamage: 20
   finalBattleFadeOutSeconds: 2
@@ -46,14 +43,47 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7e7b6c0e2ed07bd4893865c7b5c55350, type: 2}
   - {fileID: 11400000, guid: 996257ea3b2383c4f9a97843dfc3ffc9, type: 2}
   - {fileID: 11400000, guid: bdd48468bbe4a5943ae620cfbce8b6ad, type: 2}
+  - {fileID: 11400000, guid: c7524027e968bbd478963750970b66aa, type: 2}
+  - {fileID: 11400000, guid: 3625ee7136e757940ad78f9442d1a3e8, type: 2}
   - {fileID: 11400000, guid: c04f9995695be0d4aacbf35dde7c17ca, type: 2}
+  - {fileID: 11400000, guid: b646809427f0bde43834263a07cbb97f, type: 2}
+  - {fileID: 11400000, guid: 3a3abd6af807dd94682abb726d7deb51, type: 2}
   - {fileID: 11400000, guid: d52827d962f0e9447820d61df1f0d291, type: 2}
   - {fileID: 11400000, guid: dbe03db9ac2d6d845bfe25302325abc3, type: 2}
   - {fileID: 11400000, guid: 47762d7d2489ffb45b3c9188704d1856, type: 2}
+  - {fileID: 11400000, guid: 0003080b026eb2f4781c7743dbf79f6c, type: 2}
   - {fileID: 11400000, guid: 87929259b9aaca44c8d54ff4ed7d2ed7, type: 2}
+  - {fileID: 11400000, guid: 876c83be973ed8d478378604545932b1, type: 2}
   - {fileID: 11400000, guid: 78c872b6028f88f4086ef705536b2e06, type: 2}
+  - {fileID: 11400000, guid: f8ac0aede70e67d40a100846fa61f4b7, type: 2}
+  - {fileID: 11400000, guid: 8fdb52150582ef14fbb171736c9d3af2, type: 2}
   - {fileID: 11400000, guid: 05d2563da492142408dbe089684b9578, type: 2}
   - {fileID: 11400000, guid: d4591734afe138a41941507f2676eaf0, type: 2}
   - {fileID: 11400000, guid: 76712fcf1ed275f4ca8a08b181172f0b, type: 2}
+  - {fileID: 11400000, guid: e26380d54058dba4db3f1541b1015739, type: 2}
+  - {fileID: 11400000, guid: 7daba2259b0a82247a5ac8e3cdf19fff, type: 2}
+  - {fileID: 11400000, guid: c3a82ae10bad09b49832a1d8707925a2, type: 2}
+  - {fileID: 11400000, guid: df5fb6d12ad74d54c9a332b1f3af8c26, type: 2}
+  - {fileID: 11400000, guid: 6fe31d4f817ec874b8aa1d23549b3794, type: 2}
+  - {fileID: 11400000, guid: 1a5f61bbee072054f9cd3e0168c04b99, type: 2}
   - {fileID: 11400000, guid: c764af11f352d024f82738b25467cf9b, type: 2}
   - {fileID: 11400000, guid: 489f68f3e560f1349b4bce8f4053261c, type: 2}
+  genreStartMessages:
+  - genre: 0
+    message: "\u904A\u6CF3\u306E\u63A1\u7528\u8A66\u9A13\u3092\u958B\u59CB\u3059\u308B"
+  - genre: 1
+    message: "\u98DB\u884C\u306E\u63A1\u7528\u8A66\u9A13\u3092\u958B\u59CB\u3059\u308B"
+  - genre: 2
+    message: "\u4FCA\u8DB3\u306E\u63A1\u7528\u8A66\u9A13\u3092\u958B\u59CB\u3059\u308B"
+  - genre: 3
+    message: "\u52B4\u50CD\u306E\u63A1\u7528\u8A66\u9A13\u3092\u958B\u59CB\u3059\u308B"
+  - genre: 4
+    message: "\u5075\u5BDF\u306E\u63A1\u7528\u8A66\u9A13\u3092\u958B\u59CB\u3059\u308B"
+  - genre: 5
+    message: "\u6226\u95D8\u306E\u63A1\u7528\u8A66\u9A13\u3092\u958B\u59CB\u3059\u308B"
+  - genre: 6
+    message: "\u77E5\u6027\u306E\u63A1\u7528\u8A66\u9A13\u3092\u958B\u59CB\u3059\u308B"
+  - genre: 7
+    message: "\u8010\u5BD2\u306E\u63A1\u7528\u8A66\u9A13\u3092\u958B\u59CB\u3059\u308B"
+  - genre: 8
+    message: "\u8010\u71B1\u306E\u63A1\u7528\u8A66\u9A13\u3092\u958B\u59CB\u3059\u308B"

@@ -82,6 +82,30 @@ namespace DemonLordHR.Core
 
     [Header("キャラクターデータ")]
     public List<CharacterData> allCharacters = new List<CharacterData>();
+
+    [Header("ジャンル開始表示の文章")]
+    [Tooltip("採用試験開始時（候補キャラ入室前）に表示する文章を、ジャンルごとにInspectorで設定できる。" +
+      "ここに設定が無いジャンルは「{ジャンル名}の採用試験を開始する」を既定文として使う。")]
+    public List<GenreStartMessage> genreStartMessages = new List<GenreStartMessage>();
+
+    /// <summary>ジャンル開始表示に使う文章を取得する。genreStartMessagesに個別設定があればそれを使い、
+    /// 無ければ「{ジャンル名}の採用試験を開始する」を返す。</summary>
+    public string GetGenreStartMessage(RecruitmentGenre genre)
+    {
+      foreach (var entry in genreStartMessages)
+      {
+        if (entry.genre == genre && !string.IsNullOrEmpty(entry.message)) return entry.message;
+      }
+      return $"{genre.ToDisplayName()}の採用試験を開始する";
+    }
+  }
+
+  [Serializable]
+  public class GenreStartMessage
+  {
+    public RecruitmentGenre genre;
+    [Tooltip("このジャンルの採用試験開始時に表示する文章。空なら既定文（{ジャンル名}の採用試験を開始する）を使う。")]
+    public string message;
   }
 
   /// <summary>採用試験／ミニゲームのジャンル。</summary>

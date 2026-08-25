@@ -186,7 +186,10 @@ namespace DemonLordHR.Recruitment
     /// _genreStartRootが未設定でも、_genreStartText自体のGameObjectを表示/非表示できるようにしておく。</summary>
     private IEnumerator ShowGenreStart(RecruitmentGenre genre)
     {
-      if (_genreStartText != null) _genreStartText.text = $"{genre.ToDisplayName()}の採用試験を開始する";
+      if (_genreStartText != null)
+      {
+        _genreStartText.text = _settings != null ? _settings.GetGenreStartMessage(genre) : $"{genre.ToDisplayName()}の採用試験を開始する";
+      }
       SetGenreStartActive(true);
 
       yield return new WaitForSeconds(_settings != null ? _settings.genreStartDisplaySeconds : 3f);
