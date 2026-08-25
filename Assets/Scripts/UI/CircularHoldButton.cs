@@ -24,6 +24,10 @@ namespace DemonLordHR.UI
     [SerializeField] private bool _debugClickEnabled = true;
     [Tooltip("発火後、自動でゲージをリセットするか")]
     [SerializeField] private bool _resetAfterTrigger = true;
+    [Tooltip("このボタンの表示/非表示に連動させたいUIのルート（任意）。ボタン本体がSetActive(true)される" +
+      "タイミングで一緒に表示し、発火して呼び出し元がボタンをSetActive(false)するタイミングで一緒に" +
+      "非表示になる（背景パネルや説明文など、ボタンとは別オブジェクトを同時に出し入れしたい場合に使う）。")]
+    [SerializeField] private GameObject _uiRoot;
 
     public event Action OnTriggered;
 
@@ -41,6 +45,21 @@ namespace DemonLordHR.UI
     {
       get => _debugClickEnabled;
       set => _debugClickEnabled = value;
+    }
+
+    /// <summary>呼び出し元がこのボタン自身をSetActive(true)した瞬間に呼ばれる（Unity標準のコールバック）。
+    /// 表示タイミングを合わせたいだけなので、呼び出し元側に個別の連動コードを書く必要がない。</summary>
+    private void OnEnable()
+    {
+      if (_uiRoot != null) _uiRoot.SetActive(true);
+    }
+
+    /// <summary>呼び出し元がこのボタン自身をSetActive(false)した瞬間に呼ばれる。発火直後に呼び出し元が
+    /// ボタンを非表示にする既存の流れ（各ジャンルのShowRulesAndWaitReady等）にそのまま乗っかる形で、
+    /// 「選択したら連動UIも消える」を実現している。</summary>
+    private void OnDisable()
+    {
+      if (_uiRoot != null) _uiRoot.SetActive(false);
     }
 
     private void Update()
