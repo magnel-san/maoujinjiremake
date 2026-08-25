@@ -30,6 +30,9 @@ namespace DemonLordHR.Ending
     [Tooltip("合計スコアに応じて切り替える結果画像。「このスコア以上ならこの画像」という条件をここに" +
       "並べておくと、合計スコアを一番高いしきい値から順に判定し、最初に条件を満たしたものを表示する。")]
     [SerializeField] private Image _resultImage;
+    [Tooltip("結果画像とあわせて表示する説明テキスト（例：「大成功！」等）。ResultImageThreshold側の" +
+      "resultTextを表示する。未設定なら結果テキストの表示自体を行わない。")]
+    [SerializeField] private TMP_Text _resultText;
     [SerializeField] private List<ResultImageThreshold> _resultImageThresholds = new List<ResultImageThreshold>();
 
     private IStageImageGenerator _imageGenerator = new NullStageImageGenerator();
@@ -38,6 +41,13 @@ namespace DemonLordHR.Ending
     {
       if (_endButton != null) _endButton.gameObject.SetActive(false);
       _commemorativePhotoRoot?.SetActive(false);
+      SetResultActive(false);
+    }
+
+    private void SetResultActive(bool active)
+    {
+      if (_resultImage != null) _resultImage.gameObject.SetActive(active);
+      if (_resultText != null) _resultText.gameObject.SetActive(active);
     }
 
     public void SetImageGenerator(IStageImageGenerator generator)
@@ -75,6 +85,10 @@ namespace DemonLordHR.Ending
         _endButton.OnTriggered -= onEnd;
         _endButton.gameObject.SetActive(false);
       }
+
+      // 次のループ（タイトル〜最終決戦）の間、このエンディング専用の演出が残って見えてしまわないよう片付ける。
+      _commemorativePhotoRoot?.SetActive(false);
+      SetResultActive(false);
     }
 
     private string BuildPrompt(string minigameResultSummary, IReadOnlyList<CharacterData> hiredCharacters)
@@ -134,6 +148,13 @@ namespace DemonLordHR.Ending
         _resultImage.sprite = best.image;
         _resultImage.gameObject.SetActive(true);
       }
+
+      if (_resultText != null)
+      {
+        var hasText = best != null && !string.IsNullOrEmpty(best.resultText);
+        if (hasText) _resultText.text = best.resultText;
+        _resultText.gameObject.SetActive(hasText);
+      }
     }
   }
 
@@ -143,5 +164,8 @@ namespace DemonLordHR.Ending
     [Tooltip("合計スコアがこの値以上の場合にこの画像を使う。")]
     public float minScore;
     public Sprite image;
+    [Tooltip("この結果画像とあわせて表示する説明テキスト（例：「大成功！魔王城は繁栄した」）。空なら表示しない。")]
+    [TextArea]
+    public string resultText;
   }
 }

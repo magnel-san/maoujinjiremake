@@ -66,6 +66,7 @@ namespace DemonLordHR.Minigames
     protected override void OnGestureForMinigame(GestureType type)
     {
       if (type != GestureType.SwipeSideways) return;
+      PlayMotionSfx();
       SpawnWave(isPractice: false);
     }
 
@@ -73,6 +74,7 @@ namespace DemonLordHR.Minigames
     protected override void OnPracticeGesture(GestureType type)
     {
       if (type != GestureType.SwipeSideways) return;
+      PlayMotionSfx();
       SpawnWave(isPractice: true);
     }
 

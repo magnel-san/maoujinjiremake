@@ -73,6 +73,7 @@ namespace DemonLordHR.Minigames
     public void RegisterBaseDiscovered()
     {
       if (!IsRunning) return;
+      PlayMotionSfx();
       Score += totalAttackPower * scoreMultiplier;
       BasesFound++;
       UpdateScoreText();

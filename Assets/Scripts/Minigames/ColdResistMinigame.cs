@@ -122,6 +122,8 @@ namespace DemonLordHR.Minigames
     protected override void OnMinigameEnd(MinigameResult finalResult)
     {
       _cursorTrackingEnabled = false;
+      _stunTimer = 0f;
+      stunIndicator?.SetActive(false);
       ClearIceChunks();
       if (_defenderInstance != null) Destroy(_defenderInstance);
       _defenderInstance = null;

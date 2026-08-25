@@ -222,6 +222,7 @@ namespace DemonLordHR.Minigames
     {
       if (_pilotInstance == null) return;
       if (_phase != FlightPhase.Practice && _phase != FlightPhase.Playing) return;
+      PlayMotionSfx();
       _pilotVelocityY = flapLift;
     }
 

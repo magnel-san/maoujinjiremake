@@ -76,6 +76,13 @@ namespace DemonLordHR.Minigames
     [Tooltip("結果（勝敗＋スコア）を書き込むテキスト。")]
     [SerializeField] protected TMP_Text resultScoreText;
 
+    [Header("効果音")]
+    [Tooltip("効果音の再生に使うAudioSource。未設定ならこのGameObjectのAudioSourceを自動取得/追加する。")]
+    [SerializeField] protected AudioSource audioSource;
+    [Tooltip("モーション（ジェスチャー成功／ポインター操作成功など、このジャンルの「1回分の操作」が" +
+      "成立した瞬間）に鳴らす効果音。未設定なら再生しない。")]
+    [SerializeField] protected AudioClip motionSfx;
+
     public event Action<MinigameResult> OnMinigameFinished;
 
     protected List<CharacterData> assignedCharacters = new List<CharacterData>();
@@ -201,6 +208,19 @@ namespace DemonLordHR.Minigames
       RestorePlayerRotation();
 
       OnMinigameFinished?.Invoke(result);
+    }
+
+    /// <summary>ジャンルごとの「1回分の操作」が成立した瞬間に呼ぶ、motionSfxの再生ヘルパー。
+    /// 派生クラス側は、ジェスチャー成功／ポインター操作成功などの箇所でこれを呼ぶだけでよい。</summary>
+    protected void PlayMotionSfx()
+    {
+      if (motionSfx == null) return;
+      if (audioSource == null)
+      {
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+      }
+      audioSource.PlayOneShot(motionSfx);
     }
 
     /// <summary>終了直後、GetFinalScoreの値を数秒間表示してから次のフェーズへ進む。

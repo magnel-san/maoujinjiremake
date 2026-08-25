@@ -202,6 +202,7 @@ namespace DemonLordHR.Minigames
 
     private void RegisterValveTurn()
     {
+      PlayMotionSfx();
       TotalMagma += totalAttackPower * scoreMultiplier;
       SpawnMagmaObject();
       UpdateGaugeText();

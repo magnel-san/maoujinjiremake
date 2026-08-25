@@ -54,6 +54,16 @@ namespace DemonLordHR.Recruitment
     [Tooltip("エラー表示を自動的に消すまでの秒数。")]
     [SerializeField] private float _insufficientFundsDisplaySeconds = 2f;
 
+    [Header("効果音")]
+    [Tooltip("効果音の再生に使うAudioSource。未設定ならこのGameObjectのAudioSourceを自動取得/追加する。")]
+    [SerializeField] private AudioSource _audioSource;
+    [Tooltip("採用（スタンプ確定）時に鳴らす効果音。")]
+    [SerializeField] private AudioClip _hireSfx;
+    [Tooltip("不採用（パンチ確定）時に鳴らす効果音。")]
+    [SerializeField] private AudioClip _rejectSfx;
+    [Tooltip("履歴書の裏を見る（ページ送り）時に鳴らす効果音。")]
+    [SerializeField] private AudioClip _flipPageSfx;
+
     private CharacterData _currentCharacter;
     private int _currentPage;
     private bool _isOpen;
@@ -174,8 +184,20 @@ namespace DemonLordHR.Recruitment
     private void TurnPage()
     {
       if (_currentCharacter?.resumePages == null || _currentCharacter.resumePages.Length <= 1) return;
+      PlaySfx(_flipPageSfx);
       _currentPage = (_currentPage + 1) % _currentCharacter.resumePages.Length;
       ApplyPageSprite();
+    }
+
+    private void PlaySfx(AudioClip clip)
+    {
+      if (clip == null) return;
+      if (_audioSource == null)
+      {
+        _audioSource = GetComponent<AudioSource>();
+        if (_audioSource == null) _audioSource = gameObject.AddComponent<AudioSource>();
+      }
+      _audioSource.PlayOneShot(clip);
     }
 
     private void HandlePoseConfirmed(ResumePose pose)
@@ -209,6 +231,7 @@ namespace DemonLordHR.Recruitment
         return; // 資金不足のため不成立。履歴書は開いたままにし、プレイヤーがそのまま見送り(不採用)を選べるようにする。
       }
 
+      PlaySfx(_hireSfx);
       _decision = ResumeDecision.Hired;
       _resumePoseRecognizer?.SetCapturing(false);
       _stampImageRoot?.SetActive(true);
@@ -223,6 +246,7 @@ namespace DemonLordHR.Recruitment
 
     private void ConfirmReject()
     {
+      PlaySfx(_rejectSfx);
       _decision = ResumeDecision.Rejected;
       _resumePoseRecognizer?.SetCapturing(false);
       _resumeImageRoot?.SetActive(false);

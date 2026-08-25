@@ -156,6 +156,7 @@ namespace DemonLordHR.Minigames
     protected override void OnGestureForMinigame(GestureType type)
     {
       if (type != GestureType.ArmSwingBoth) return;
+      PlayMotionSfx();
       _boostSpeed += totalAttackPower * _boostPerAttackPower;
     }
 
@@ -163,6 +164,7 @@ namespace DemonLordHR.Minigames
     protected override void OnPracticeGesture(GestureType type)
     {
       if (type != GestureType.ArmSwingBoth) return;
+      PlayMotionSfx();
       _boostSpeed += totalAttackPower * _boostPerAttackPower;
     }
 

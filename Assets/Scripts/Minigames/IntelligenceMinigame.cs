@@ -75,6 +75,7 @@ namespace DemonLordHR.Minigames
 
       if (_nextExpectedStep < PentagramOrder.Length && nodeIndex == PentagramOrder[_nextExpectedStep])
       {
+        PlayMotionSfx();
         _nextExpectedStep++;
         Debug.Log($"[Intelligence] node {nodeIndex} 正解（{_nextExpectedStep}/{PentagramOrder.Length}）");
       }

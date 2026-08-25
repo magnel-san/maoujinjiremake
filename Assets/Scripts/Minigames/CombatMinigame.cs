@@ -68,6 +68,7 @@ namespace DemonLordHR.Minigames
     protected override void OnGestureForMinigame(GestureType type)
     {
       if (type != GestureType.AlternatingPunch) return;
+      PlayMotionSfx();
       SpawnFist(isPractice: false);
     }
 
@@ -75,6 +76,7 @@ namespace DemonLordHR.Minigames
     protected override void OnPracticeGesture(GestureType type)
     {
       if (type != GestureType.AlternatingPunch) return;
+      PlayMotionSfx();
       SpawnFist(isPractice: true);
     }
 

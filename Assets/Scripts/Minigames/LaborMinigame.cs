@@ -67,6 +67,7 @@ namespace DemonLordHR.Minigames
     {
       if (type != GestureType.HammerSwingDown) return;
 
+      PlayMotionSfx();
       Score += totalAttackPower * scoreMultiplier;
 
       CurrentGauge += totalAttackPower;
