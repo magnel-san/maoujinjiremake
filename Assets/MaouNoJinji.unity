@@ -12625,6 +12625,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1257145251}
+  - component: {fileID: 1257145252}
   m_Layer: 0
   m_Name: HeroRoot
   m_TagString: Untagged
@@ -12648,6 +12649,27 @@ Transform:
   - {fileID: 511365872}
   m_Father: {fileID: 717844466}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &1257145252
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1257145250}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 21.059164, y: 37.46377, z: 29.472258}
+  m_Center: {x: -0.6982422, y: 15.475534, z: -0.6143341}
 --- !u!1 &1270931057
 GameObject:
   m_ObjectHideFlags: 0
@@ -17258,6 +17280,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1681974186}
+  - component: {fileID: 1681974187}
   m_Layer: 0
   m_Name: HeroRoot
   m_TagString: Untagged
@@ -17281,6 +17304,27 @@ Transform:
   - {fileID: 819707184}
   m_Father: {fileID: 362820722}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &1681974187
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1681974185}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 21.059164, y: 37.46377, z: 29.472258}
+  m_Center: {x: -0.69799805, y: 15.475534, z: -0.6143341}
 --- !u!1 &1681990304
 GameObject:
   m_ObjectHideFlags: 0
